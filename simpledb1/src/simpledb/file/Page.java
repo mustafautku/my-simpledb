@@ -62,8 +62,9 @@ public class Page {
     * @return the maximum number of bytes required to store a string of size n
     */
    public static final int STR_SIZE(int n) {
-      float bytesPerChar = Charset.defaultCharset().newEncoder().maxBytesPerChar();
-      return INT_SIZE + (n * (int)bytesPerChar);
+	   int bytesPerChar = 2;
+	   return (n+1) * bytesPerChar;
+
    }
    
    private ByteBuffer contents = ByteBuffer.allocateDirect(BLOCK_SIZE);
@@ -138,11 +139,17 @@ public class Page {
     * @return the string value at that offset
     */
    public synchronized String getString(int offset) {
-      contents.position(offset);
-      int len = contents.getInt();
-      byte[] byteval = new byte[len];
-      contents.get(byteval);
-      return new String(byteval);
+	   contents.position(offset);
+		StringBuffer sb = new StringBuffer();
+		boolean done = false;
+		while (!done) {
+			char c = contents.getChar();
+			if (c == '\0')
+				done = true;
+			else
+				sb.append(c);
+		}
+		return new String(sb);
    }
    
    /**
@@ -151,9 +158,10 @@ public class Page {
     * @param val the string to be written to the page
     */
    public synchronized void setString(int offset, String val) {
-      contents.position(offset);
-      byte[] byteval = val.getBytes();
-      contents.putInt(byteval.length);
-      contents.put(byteval);
+	   contents.position(offset);
+		for (int i=0; i<val.length(); i++)
+			contents.putChar(val.charAt(i));
+		contents.putChar('\0');
+
    }
 }
