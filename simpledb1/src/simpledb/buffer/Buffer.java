@@ -19,6 +19,7 @@ public class Buffer {
    private int pins = 0;
    private int modifiedBy = -1;  // negative means not modified
    private int logSequenceNumber = -1; // negative means no corresponding log record
+   private int bId;
 
    /**
     * Creates a new buffer, wrapping a new 
@@ -34,7 +35,7 @@ public class Buffer {
     * {@link simpledb.server.SimpleDB#initFileAndLogMgr(String)} or
     * is called first.
     */
-   public Buffer() {}
+   public Buffer(int id) {bId=id;}
    
    /**
     * Returns the integer value at the specified offset of the
@@ -111,6 +112,9 @@ public class Buffer {
       return blk;
    }
 
+   
+   
+   
    /**
     * Writes the page to its disk block if the
     * page is dirty.
@@ -137,7 +141,7 @@ public class Buffer {
     * Decreases the buffer's pin count.
     */
    void unpin() {
-      pins--;
+	  pins--;
    }
 
    /**
@@ -186,5 +190,19 @@ public class Buffer {
       fmtr.format(contents);
       blk = contents.append(filename);
       pins = 0;
+   }
+   
+   String listBuffer(){	   
+	   String s="";
+	   if (blk==null) {
+		   s="E "; 
+		   return s;
+	   }
+	   s= bId +"\\"+ blk.number() + "\\";
+	   if(pins>0)
+  		 s += pins + "  ";
+	   else
+  		 s += "u  ";
+	   return s; 
    }
 }

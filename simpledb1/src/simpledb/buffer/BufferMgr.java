@@ -118,7 +118,15 @@ public class BufferMgr {
       return bufferMgr.available();
    }
    
+   
+   
+   public String listBuffer(){
+	   return bufferMgr.listBuffer();
+   }
+     
+   
    private boolean waitingTooLong(long starttime) {
       return System.currentTimeMillis() - starttime > MAX_TIME;
    }
+   
 }

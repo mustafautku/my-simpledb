@@ -1,5 +1,8 @@
 package simpledb.buffer;
 
+import java.util.LinkedList;
+import java.util.Queue;
+
 import simpledb.file.*;
 
 /**
@@ -10,6 +13,7 @@ import simpledb.file.*;
 class BasicBufferMgr {
    private Buffer[] bufferpool;
    private int numAvailable;
+   private Queue<Buffer> unpinned=new LinkedList<Buffer>();
    
    /**
     * Creates a buffer manager having the specified number 
@@ -28,7 +32,7 @@ class BasicBufferMgr {
       bufferpool = new Buffer[numbuffs];
       numAvailable = numbuffs;
       for (int i=0; i<numbuffs; i++)
-         bufferpool[i] = new Buffer();
+         bufferpool[i] = new Buffer(i);
    }
    
    /**
@@ -58,8 +62,10 @@ class BasicBufferMgr {
             return null;
          buff.assignToBlock(blk);
       }
-      if (!buff.isPinned())
+      if (!buff.isPinned()){
          numAvailable--;
+         unpinned.remove(buff);
+      }
       buff.pin();
       return buff;
    }
@@ -89,8 +95,10 @@ class BasicBufferMgr {
     */
    synchronized void unpin(Buffer buff) {
       buff.unpin();
-      if (!buff.isPinned())
+      if (!buff.isPinned()){
          numAvailable++;
+         unpinned.add(buff); // add to end of list
+      }
    }
    
    /**
@@ -101,19 +109,30 @@ class BasicBufferMgr {
       return numAvailable;
    }
    
-   private Buffer findExistingBuffer(Block blk) {
-      for (Buffer buff : bufferpool) {
-         Block b = buff.block();
-         if (b != null && b.equals(blk))
-            return buff;
-      }
-      return null;
-   }
+   
+   
+	private Buffer findExistingBuffer(Block blk) {
+		for (Buffer buff : bufferpool) {
+			Block b = buff.block();
+			if (b != null && b.equals(blk))
+				return buff;
+		}
+		return null;
+	}
    
    private Buffer chooseUnpinnedBuffer() {
-      for (Buffer buff : bufferpool)
-         if (!buff.isPinned())
-         return buff;
-      return null;
+	   for (Buffer buff : bufferpool)
+	         if (buff.block()==null)
+	        	 return buff;
+	   return unpinned.poll();
+      }
+   
+   
+   String listBuffer(){
+	   String s=""; 
+	   for (Buffer buff : bufferpool) {
+	         s += buff.listBuffer();
+	      }
+	      return s;
    }
 }
