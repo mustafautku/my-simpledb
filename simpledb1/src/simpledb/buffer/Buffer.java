@@ -19,7 +19,7 @@ public class Buffer {
    private int pins = 0;
    private int modifiedBy = -1;  // negative means not modified
    private int logSequenceNumber = -1; // negative means no corresponding log record
-   private int bId;
+   private int bId;  // buffer id to track the buffer replacements.
 
    /**
     * Creates a new buffer, wrapping a new 
@@ -184,12 +184,14 @@ public class Buffer {
     * of the previous page are first written to disk.
     * @param filename the name of the file
     * @param fmtr a page formatter, used to initialize the page
+ * @return 
     */
-   void assignToNew(String filename, PageFormatter fmtr) {
+   Block assignToNew(String filename, PageFormatter fmtr) {
       flush();
       fmtr.format(contents);
       blk = contents.append(filename);
       pins = 0;
+      return blk;
    }
    
    String listBuffer(){	   

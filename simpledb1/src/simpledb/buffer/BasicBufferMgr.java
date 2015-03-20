@@ -1,6 +1,11 @@
 package simpledb.buffer;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.Queue;
 
 import simpledb.file.*;
@@ -11,8 +16,9 @@ import simpledb.file.*;
  *
  */
 class BasicBufferMgr {
-   private Buffer[] bufferpool;
-   private int numAvailable;
+   
+   private Map<Block,Buffer> bufferpool;
+   private int numAvailable,numBuffs;
    private Queue<Buffer> unpinned=new LinkedList<Buffer>();
    
    /**
@@ -29,10 +35,11 @@ class BasicBufferMgr {
     * @param numbuffs the number of buffer slots to allocate
     */
    BasicBufferMgr(int numbuffs) {
-      bufferpool = new Buffer[numbuffs];
+
+      bufferpool= new HashMap<Block,Buffer> (numbuffs,1); // load factor is set to 1.0
+      numBuffs=numbuffs;
       numAvailable = numbuffs;
-      for (int i=0; i<numbuffs; i++)
-         bufferpool[i] = new Buffer(i);
+      
    }
    
    /**
@@ -40,9 +47,13 @@ class BasicBufferMgr {
     * @param txnum the transaction's id number
     */
    synchronized void flushAll(int txnum) {
-      for (Buffer buff : bufferpool)
-         if (buff.isModifiedBy(txnum))
-         buff.flush();
+      Iterable<Buffer> buffers=bufferpool.values();
+      Iterator<Buffer> it=buffers.iterator();
+      while(it.hasNext()){
+    	  Buffer buff=it.next();
+    	  if (buff.isModifiedBy(txnum))
+    	         buff.flush();
+      }
    }
    
    /**
@@ -56,15 +67,27 @@ class BasicBufferMgr {
     */
    synchronized Buffer pin(Block blk) {
       Buffer buff = findExistingBuffer(blk);
+      
       if (buff == null) {
+    	  if(bufferpool.size() < numBuffs) {  // thus MaP is not full
+        	  buff=new Buffer(bufferpool.size());
+        	  buff.assignToBlock(blk);
+        	  bufferpool.put(blk, buff);
+        	  numAvailable--;
+        	  buff.pin();
+              return buff;
+    	   }
          buff = chooseUnpinnedBuffer();
          if (buff == null)
             return null;
+         
+         Buffer oldBuffer=bufferpool.remove(buff.block());    // oldBuffer = buff
          buff.assignToBlock(blk);
+         bufferpool.put(blk, buff);         
       }
       if (!buff.isPinned()){
          numAvailable--;
-         unpinned.remove(buff);
+         unpinned.remove(buff); //findExistingBuffer'den gelen 'unpin' bir buffer ise, unpin listesinden cýkarmak gerek.
       }
       buff.pin();
       return buff;
@@ -80,10 +103,25 @@ class BasicBufferMgr {
     * @return the pinned buffer
     */
    synchronized Buffer pinNew(String filename, PageFormatter fmtr) {
-      Buffer buff = chooseUnpinnedBuffer();
+	   Buffer buff=null;
+	   Block blk=null;
+	   if(bufferpool.size() < numBuffs) {  // thus MaP is not full
+     	  buff=new Buffer(bufferpool.size());
+     	  blk=buff.assignToNew(filename, fmtr);
+     	  bufferpool.put(blk, buff);
+     	  numAvailable--;
+     	  buff.pin();
+          return buff;
+ 	   }
+      buff = chooseUnpinnedBuffer();
       if (buff == null)
          return null;
-      buff.assignToNew(filename, fmtr);
+      
+      Buffer oldBuffer=bufferpool.remove(buff.block());      
+      blk=buff.assignToNew(filename, fmtr);
+      
+      bufferpool.put(blk, buff);
+      
       numAvailable--;
       buff.pin();
       return buff;
@@ -112,27 +150,22 @@ class BasicBufferMgr {
    
    
 	private Buffer findExistingBuffer(Block blk) {
-		for (Buffer buff : bufferpool) {
-			Block b = buff.block();
-			if (b != null && b.equals(blk))
-				return buff;
-		}
-		return null;
+		return bufferpool.get(blk);
 	}
    
    private Buffer chooseUnpinnedBuffer() {
-	   for (Buffer buff : bufferpool)
-	         if (buff.block()==null)
-	        	 return buff;
 	   return unpinned.poll();
       }
    
    
    String listBuffer(){
-	   String s=""; 
-	   for (Buffer buff : bufferpool) {
-	         s += buff.listBuffer();
-	      }
-	      return s;
+		String s = "";
+		Iterable<Buffer> buffers = bufferpool.values();
+		Iterator<Buffer> it = buffers.iterator();
+		while (it.hasNext()) {
+			Buffer buff = it.next();
+			s += buff.listBuffer();
+		}
+		return s;
    }
 }
