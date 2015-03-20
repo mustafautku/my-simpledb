@@ -1,5 +1,8 @@
 package simpledb.buffer;
 
+import java.util.LinkedList;
+import java.util.Queue;
+
 import simpledb.file.*;
 
 /**
@@ -10,7 +13,7 @@ import simpledb.file.*;
 class BasicBufferMgr {
    private Buffer[] bufferpool;
    private int numAvailable;
-   
+   private Queue<Buffer> queue = new LinkedList<Buffer>();
    /**
     * Creates a buffer manager having the specified number 
     * of buffer slots.
@@ -90,6 +93,7 @@ class BasicBufferMgr {
    synchronized void unpin(Buffer buff) {
       buff.unpin();
       if (!buff.isPinned())
+         queue.offer(buff);
          numAvailable++;
    }
    
@@ -111,9 +115,10 @@ class BasicBufferMgr {
    }
    
    private Buffer chooseUnpinnedBuffer() {
-      for (Buffer buff : bufferpool)
+      for (Buffer buff : bufferpool){
          if (!buff.isPinned())
-         return buff;
-      return null;
+        	 queue.offer(buff);
+      }
+      return queue.poll();
    }
 }
