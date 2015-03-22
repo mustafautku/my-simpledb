@@ -13,7 +13,8 @@ import simpledb.file.*;
  * the LSN of the corresponding log record.
  * @author Edward Sciore
  */
-public class Buffer {
+public class Buffer implements Comparable<Buffer> {
+   private Integer id;
    private Page contents = new Page();
    private Block blk = null;
    private int pins = 0;
@@ -36,7 +37,33 @@ public class Buffer {
     */
    public Buffer() {}
    
-   /**
+   
+   
+    @Override
+	public String toString()
+	{
+    	StringBuilder text = new StringBuilder();
+    	text.append( "Buffer id : " + getId() );
+    	
+    	if ( block() != null )
+    		text.append( "\nBlock number : " + block().number() );
+    	else
+    		text.append( "\nBlock number : null");
+    	
+    	text.append( "\nisPinned : " + isPinned() );
+    	
+    	return text.toString();
+	}
+
+    
+	@Override
+	public int compareTo(Buffer o)
+	{
+		return 0;
+	}
+
+
+/**
     * Returns the integer value at the specified offset of the
     * buffer's page.
     * If an integer was not stored at that location,
@@ -187,4 +214,22 @@ public class Buffer {
       blk = contents.append(filename);
       pins = 0;
    }
+
+
+
+	public Integer getId()
+	{
+		return id;
+	}
+	
+	
+	
+	public void setId(Integer id)
+	{
+		this.id = id;
+	}
+	
+	
+	
+
 }
