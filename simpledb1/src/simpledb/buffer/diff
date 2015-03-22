@@ -1,0 +1,403 @@
+diff --git a/src/simpledb/buffer/BasicBufferMgr.java b/src/simpledb/buffer/BasicBufferMgr.java
+index 131cc97..3eca454 100755
+--- a/src/simpledb/buffer/BasicBufferMgr.java
++++ b/src/simpledb/buffer/BasicBufferMgr.java
+@@ -2,6 +2,10 @@ package simpledb.buffer;
+ 
+ import simpledb.file.*;
+ 
++import java.util.HashMap;
++import java.util.LinkedList;
++import java.util.Queue;
++
+ /**
+  * Manages the pinning and unpinning of buffers to blocks.
+  * @author Edward Sciore
+@@ -10,7 +14,10 @@ import simpledb.file.*;
+ class BasicBufferMgr {
+    private Buffer[] bufferpool;
+    private int numAvailable;
+-   
++
++   private HashMap<String, Buffer> blockBufferHashMap;
++   private Queue<Buffer> unpinnedBufferQueue;
++
+    /**
+     * Creates a buffer manager having the specified number 
+     * of buffer slots.
+@@ -25,10 +32,16 @@ class BasicBufferMgr {
+     * @param numbuffs the number of buffer slots to allocate
+     */
+    BasicBufferMgr(int numbuffs) {
++      blockBufferHashMap = new HashMap<String, Buffer>();
++      unpinnedBufferQueue = new LinkedList<Buffer>();
++
+       bufferpool = new Buffer[numbuffs];
+       numAvailable = numbuffs;
+-      for (int i=0; i<numbuffs; i++)
+-         bufferpool[i] = new Buffer();
++      for (int i=0; i<numbuffs; i++) {
++         Buffer newbuf = new Buffer();
++         bufferpool[i] = newbuf;
++         unpinnedBufferQueue.add(newbuf);
++      }
+    }
+    
+    /**
+@@ -51,16 +64,49 @@ class BasicBufferMgr {
+     * @return the pinned buffer
+     */
+    synchronized Buffer pin(Block blk) {
++
++      System.out.println("Attempting to pin block " + blk.toString());
++
+       Buffer buff = findExistingBuffer(blk);
++      Block oldblock = null;
+       if (buff == null) {
+          buff = chooseUnpinnedBuffer();
+          if (buff == null)
+             return null;
++         oldblock = buff.block();  // Block-Buffer eslesmesinden kaldirabilmek icin eski blocku almaliyiz.
+          buff.assignToBlock(blk);
+       }
+-      if (!buff.isPinned())
++      if (!buff.isPinned()) {
+          numAvailable--;
++
++         // Buffer-Block kayitlarindaki ekleme-cikarmayi burada yapiyoruz.
++         // Unpin'de hicbir islem yapmiyoruz cunku; bir buffer'i unpin ettikten sonra icinde tuttugu blocku hemen cikarmiyoruz
++         // Daha sonra bu block icin bir pin istegi gelirse icinde bulunduran buffer'i servis ediyoruz. Boylece
++         // hicbir islem yapmadan bir pin istegine cevap verebiliyoruz.
++         if (oldblock != null && !buff.block().equals(oldblock)) {
++            // Bufferda halihazirda bulunan bir blocktan baska bir blocku buraya aliyoruz.
++            // Kayitlarda duran eski blogu kaldirip yenisini koymali.
++            System.out.println("Removing block " + oldblock.toString() + " from buffer " + buff.getID() + " on hashmap.");
++            blockBufferHashMap.remove(oldblock.toString());
++
++            System.out.println("Putting block " + blk.toString() + " to buffer " + buff.getID() + " on hashmap.");
++            blockBufferHashMap.put(blk.toString(), buff);
++
++         }
++         else if (oldblock != null && buff.block().equals(oldblock)) {
++            // Buradaki durum; bufferi unpin ettik, bu buffera baska hicbir block gelmeden yine ayni block istegi geldi.
++            // Hal boyleyken bu block burada zaten varmis deyip baska bir islem yapmiyoruz.
++            System.out.println("Pinning previously unpinned buffer because buffer still has the same block.");
++         }
++         else {
++            // Bu baslangic durumu, bufferda hicbir block yok.
++            System.out.println("Putting block " + blk.toString() + " to buffer " + buff.getID() + " on hashmap.");
++            blockBufferHashMap.put(blk.toString(), buff);
++         }
++      }
++
+       buff.pin();
++      System.out.println(this.toString());
+       return buff;
+    }
+    
+@@ -74,12 +120,27 @@ class BasicBufferMgr {
+     * @return the pinned buffer
+     */
+    synchronized Buffer pinNew(String filename, PageFormatter fmtr) {
++      System.out.println("Allocating and pinning a new block for file " + filename);
+       Buffer buff = chooseUnpinnedBuffer();
+       if (buff == null)
+          return null;
++
++      // assigntonew blocka atanmis bufferi degistiriyor. blockbuffer eslemesinden kaldirmak icin buna bir referans almaliyiz.
++      Block oldblock = buff.block();
++
+       buff.assignToNew(filename, fmtr);
+       numAvailable--;
+       buff.pin();
++
++      if (oldblock != null) {
++         System.out.println("Removing block " + oldblock.toString() + " from buffer " + buff.getID() + " on hashmap.");
++         blockBufferHashMap.remove(oldblock.toString());
++      }
++
++      System.out.println("Putting block " + buff.block().toString() + " to buffer " + buff.getID() + " on hashmap.");
++      blockBufferHashMap.put(buff.block().toString(), buff);
++
++      System.out.println(this.toString());
+       return buff;
+    }
+    
+@@ -88,10 +149,26 @@ class BasicBufferMgr {
+     * @param buff the buffer to be unpinned
+     */
+    synchronized void unpin(Buffer buff) {
++      System.out.println("Unpinning buffer " + buff.getID());
+       buff.unpin();
+-      if (!buff.isPinned())
++
++      if (!buff.isPinned()) {
+          numAvailable++;
++         unpinnedBufferQueue.add(buff);
++      }
++
++      System.out.println(this.toString());
++
++   }
++
++   /**
++    * Verilen buffer indisindeki buffer'i unpin eder.
++    * Birim testler icin gerekli zira bufferlarin kendisine disaridan ulasamiyoruz.
++    */
++   synchronized void unpin(int bufferind){
++      unpin(bufferpool[bufferind]);
+    }
++
+    
+    /**
+     * Returns the number of available (i.e. unpinned) buffers.
+@@ -102,18 +179,63 @@ class BasicBufferMgr {
+    }
+    
+    private Buffer findExistingBuffer(Block blk) {
+-      for (Buffer buff : bufferpool) {
+-         Block b = buff.block();
+-         if (b != null && b.equals(blk))
+-            return buff;
++      Buffer existingbuffer = blockBufferHashMap.get(blk.toString());
++
++      if (existingbuffer == null) {
++         // Bu blocku tutan bir buffer yok.
++         System.out.println("findExistingBuffer is going to return null");
+       }
+-      return null;
++      else {
++         // Bu blocku tutan bir buffar var.
++         System.out.println("findExistingBuffer is going to return " + existingbuffer.getID());
++         if (unpinnedBufferQueue.contains(existingbuffer)) {
++            // Bufferi unpin etmisiz, kuyruga koymusuz, ama aradigimiz block burada. Kuyruktan cikaralim
++            System.out.println("Removing buffer " + existingbuffer.getID() + " from buffer pool because of unpinned hit.");
++            unpinnedBufferQueue.remove(existingbuffer);
++         }
++      }
++
++      return existingbuffer;
+    }
+    
+    private Buffer chooseUnpinnedBuffer() {
+-      for (Buffer buff : bufferpool)
+-         if (!buff.isPinned())
+-         return buff;
+-      return null;
++      if (unpinnedBufferQueue.size() == 0) {
++         System.out.println("No buffer is available in the queue.");
++         return null;
++      }
++      else {
++         Buffer canditate = unpinnedBufferQueue.remove();
++         System.out.println("Picked buffer no " + canditate.getID() + " from the queue");
++         return canditate;
++      }
+    }
++
++   /**
++    * Bufferlarin durumlarini string seklinde geri dondurur.
++    */
++   public String toString() {
++      String dumpstr = "";
++      for (Buffer buff : bufferpool) {
++         dumpstr += buff.toString_2() + "\n";
++      }
++
++      String queuestatus = "";
++      if (unpinnedBufferQueue.size() == 0 ) {
++         queuestatus = "Queue is empty";
++      } else {
++         for (Buffer buff : unpinnedBufferQueue) {
++            queuestatus += buff.getID() + " ";
++         }
++      }
++      dumpstr += "Queue status: " + queuestatus + "\n";
++
++      String mapstatus = "Mapping status:\n";
++      for (String blkstr : blockBufferHashMap.keySet()) {
++         mapstatus += "block " + blkstr + " to buffer " + blockBufferHashMap.get(blkstr).getID() + "\n";
++      }
++      dumpstr += mapstatus;
++
++      return dumpstr;
++   }
++
+ }
+diff --git a/src/simpledb/buffer/Buffer.java b/src/simpledb/buffer/Buffer.java
+index 5f0d0a0..cee4b94 100755
+--- a/src/simpledb/buffer/Buffer.java
++++ b/src/simpledb/buffer/Buffer.java
+@@ -194,4 +194,40 @@ public class Buffer {
+       blk = contents.append(filename);
+       pins = 0;
+    }
++
++   /**
++    * Ilgili bufferin durumu hakkinda butun bilgileri verir.
++    * @return bufferstatus.
++    */
++
++   public int getID() {
++      return this.id;
++   }
++
++   public String toString_1() {
++      String bufferstatus;
++
++      bufferstatus = "Buffer ID: " + this.id;
++      bufferstatus += "Containing block: " + this.blk.number();
++      bufferstatus += "Pins: " + this.pins;
++      bufferstatus += "modifiedBy: " + this.modifiedBy;
++      bufferstatus += "LogSeq: " + this.logSequenceNumber;
++
++      return bufferstatus;
++   }
++
++   public String toString_2() {
++      String bufferstatus = "";
++
++      bufferstatus += "Buffer ID: " + this.id;
++      bufferstatus += " pins: " + this.pins;
++
++      if (blk == null)
++         bufferstatus += " block: null";
++      else
++         bufferstatus += " block: " + this.blk.toString();
++
++      return bufferstatus;
++   }
++
+ }
+\ No newline at end of file
+diff --git a/src/simpledb/buffer/BufferMgr.java b/src/simpledb/buffer/BufferMgr.java
+index 8140884..65f1e4a 100755
+--- a/src/simpledb/buffer/BufferMgr.java
++++ b/src/simpledb/buffer/BufferMgr.java
+@@ -19,7 +19,7 @@ import simpledb.file.*;
+  * @author Edward Sciore
+  */
+ public class BufferMgr {
+-   private static final long MAX_TIME = 10000; // 10 seconds
++   private static final long MAX_TIME = 750; // 10 seconds
+    private BasicBufferMgr bufferMgr;
+    
+    /**
+@@ -101,6 +101,14 @@ public class BufferMgr {
+       if (!buff.isPinned())
+          notifyAll();
+    }
++
++   /**
++    * Verilen buffer indisindeki bufferi unpin eder.
++    * Gerkeli zira unpin etmek icin bufferlarin kendilerine ulasamiyoruz.
++    */
++   public synchronized void unpin(int bufferind) {
++      bufferMgr.unpin(bufferind);
++   }
+    
+    /**
+     * Flushes the dirty buffers modified by the specified transaction.
+@@ -121,4 +129,9 @@ public class BufferMgr {
+    private boolean waitingTooLong(long starttime) {
+       return System.currentTimeMillis() - starttime > MAX_TIME;
+    }
++
++   public String toString() {
++      return bufferMgr.toString();
++   }
++
+ }
+diff --git a/src/simpledb/buffer/BufferTest.java b/src/simpledb/buffer/BufferTest.java
+new file mode 100644
+index 0000000..af28f8f
+--- /dev/null
++++ b/src/simpledb/buffer/BufferTest.java
+@@ -0,0 +1,87 @@
++package simpledb.buffer;
++
++
++import simpledb.file.Block;
++import simpledb.server.SimpleDB;
++
++public class BufferTest {
++
++   public static void main(String[] args) {
++      test2();
++   }
++
++   private static void test1() {
++      int BUFFER_SIZE = 2;
++
++      SimpleDB.initFileMgr("dbfiles");
++
++      BufferMgr bufmgr = new BufferMgr(BUFFER_SIZE);
++
++      Block b1 = new Block("exampleblockfile", 1);
++      Block b2 = new Block("exampleblockfile", 2);
++      Block b3 = new Block("exampleblockfile", 3);
++      Block b4 = new Block("exampleblockfile", 4);
++      Block b5 = new Block("exampleblockfile", 5);
++      Block b6 = new Block("exampleblockfile", 6);
++
++      System.out.println("Starting");
++      System.out.println(bufmgr.toString());
++
++      bufmgr.pin(b1);
++      System.out.println(bufmgr.toString());
++
++      bufmgr.unpin(0);
++      System.out.println(bufmgr.toString());
++
++      bufmgr.pin(b2);
++      System.out.println(bufmgr.toString());
++
++      bufmgr.pin(b3);
++      System.out.println(bufmgr.toString());
++   }
++
++   private static void test2() {
++      int BUFFER_SIZE = 4;
++
++      SimpleDB.initFileMgr("dbfiles");
++
++      BufferMgr bufmgr = new BufferMgr(BUFFER_SIZE);
++
++      Block b1 = new Block("exampleblockfile", 1);
++      Block b2 = new Block("exampleblockfile", 2);
++      Block b3 = new Block("exampleblockfile", 3);
++      Block b4 = new Block("exampleblockfile", 4);
++      Block b5 = new Block("exampleblockfile", 5);
++      Block b6 = new Block("exampleblockfile", 6);
++      Block b7 = new Block("exampleblockfile", 7);
++      Block b8 = new Block("exampleblockfile", 8);
++
++      System.out.println("Starting. Initial Status:");
++      System.out.println(bufmgr.toString());
++
++      bufmgr.pin(b1);
++
++      bufmgr.unpin(0);
++
++      bufmgr.pin(b2);
++
++      bufmgr.pin(b3);
++
++      bufmgr.pin(b4);
++
++      bufmgr.unpin(3);
++
++      bufmgr.unpin(1);
++
++      bufmgr.unpin(2);
++
++      bufmgr.pin(b5);
++
++      bufmgr.pin(b6);
++
++      bufmgr.pin(b7);
++
++      bufmgr.pin(b8);
++   }
++
++}

@@ -19,7 +19,7 @@ import simpledb.file.*;
  * @author Edward Sciore
  */
 public class BufferMgr {
-   private static final long MAX_TIME = 10000; // 10 seconds
+   private static final long MAX_TIME = 750; // 10 seconds
    private BasicBufferMgr bufferMgr;
    
    /**
@@ -101,6 +101,14 @@ public class BufferMgr {
       if (!buff.isPinned())
          notifyAll();
    }
+
+   /**
+    * Verilen buffer indisindeki bufferi unpin eder.
+    * Gerkeli zira unpin etmek icin bufferlarin kendilerine ulasamiyoruz.
+    */
+   public synchronized void unpin(int bufferind) {
+      bufferMgr.unpin(bufferind);
+   }
    
    /**
     * Flushes the dirty buffers modified by the specified transaction.
@@ -121,4 +129,9 @@ public class BufferMgr {
    private boolean waitingTooLong(long starttime) {
       return System.currentTimeMillis() - starttime > MAX_TIME;
    }
+
+   public String toString() {
+      return bufferMgr.toString();
+   }
+
 }

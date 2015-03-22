@@ -1,0 +1,5 @@
+Paket LRU'yu eksiksiz uygulamaktadir. Birkac not:
+
+- Yaptigim eklentileri daha rahat gormek icin diff dosyasini inceleyebilirsiniz.
+- LRU'yu test eden birim BufferTest sinifidir, lakin otomatize bir test degildir. LRU'yu gozlemlemek icin programin
+    stdout'a verdigi durum ciktilarini inceleyebilirsiniz.

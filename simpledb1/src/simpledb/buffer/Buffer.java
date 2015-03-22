@@ -14,11 +14,14 @@ import simpledb.file.*;
  * @author Edward Sciore
  */
 public class Buffer {
+   private static int bufferidcounter = 0;  // Buffer'lara ID atamasi yapmak icin bu alandan yararlaniyoruz
+
    private Page contents = new Page();
    private Block blk = null;
    private int pins = 0;
    private int modifiedBy = -1;  // negative means not modified
    private int logSequenceNumber = -1; // negative means no corresponding log record
+   private int id;
 
    /**
     * Creates a new buffer, wrapping a new 
@@ -34,7 +37,11 @@ public class Buffer {
     * {@link simpledb.server.SimpleDB#initFileAndLogMgr(String)} or
     * is called first.
     */
-   public Buffer() {}
+   public Buffer() {
+      // Debug icin ID atamasi.
+      this.id = bufferidcounter;
+      bufferidcounter++;
+   }
    
    /**
     * Returns the integer value at the specified offset of the
@@ -187,4 +194,40 @@ public class Buffer {
       blk = contents.append(filename);
       pins = 0;
    }
+
+   /**
+    * Ilgili bufferin durumu hakkinda butun bilgileri verir.
+    * @return bufferstatus.
+    */
+
+   public int getID() {
+      return this.id;
+   }
+
+   public String toString_1() {
+      String bufferstatus;
+
+      bufferstatus = "Buffer ID: " + this.id;
+      bufferstatus += "Containing block: " + this.blk.number();
+      bufferstatus += "Pins: " + this.pins;
+      bufferstatus += "modifiedBy: " + this.modifiedBy;
+      bufferstatus += "LogSeq: " + this.logSequenceNumber;
+
+      return bufferstatus;
+   }
+
+   public String toString_2() {
+      String bufferstatus = "";
+
+      bufferstatus += "Buffer ID: " + this.id;
+      bufferstatus += " pins: " + this.pins;
+
+      if (blk == null)
+         bufferstatus += " block: null";
+      else
+         bufferstatus += " block: " + this.blk.toString();
+
+      return bufferstatus;
+   }
+
 }
