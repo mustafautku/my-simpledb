@@ -72,6 +72,11 @@ public class LogMgr implements Iterable<BasicLogRecord> {
       flush();
       return new LogIterator(currentblk);
    }
+   
+   public synchronized Iterator<BasicLogRecord> forwardIterator() {
+	      flush();
+	      return new LogForwardIterator();
+	   }
 
    /**
     * Appends a log record to the file.

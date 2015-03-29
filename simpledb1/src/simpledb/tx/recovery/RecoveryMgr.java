@@ -87,6 +87,13 @@ public class RecoveryMgr {
          return new SetStringRecord(txnum, blk, offset, oldval).writeToLog();
    }
 
+   public void listLog(){
+	   Iterator<LogRecord> iter = new LogRecordForwardIterator();
+	      while (iter.hasNext()) {
+	         LogRecord rec = iter.next();
+	         System.out.println(rec.toString());
+	      }
+   }
    /**
     * Rolls back the transaction.
     * The method iterates through the log records,
@@ -134,4 +141,6 @@ public class RecoveryMgr {
    private boolean isTempBlock(Block blk) {
       return blk.fileName().startsWith("temp");
    }
+   
+   
 }

@@ -1,10 +1,16 @@
 package simpledb.tx;
 
+
+import java.util.*;
+
 import simpledb.server.SimpleDB;
 import simpledb.file.Block;
 import simpledb.buffer.*;
+import simpledb.tx.recovery.CheckpointRecord;
+import simpledb.tx.recovery.LogRecord;
 import simpledb.tx.recovery.RecoveryMgr;
 import simpledb.tx.concurrency.ConcurrencyMgr;
+import simpledb.tx.concurrency.LockAbortException;
 
 /**
  * Provides transaction management for clients,
@@ -20,6 +26,11 @@ public class Transaction {
    private int txnum;
    private BufferList myBuffers = new BufferList();
    
+   private static int activeTXCount = 0;
+   private static boolean Qcheckpointing = false;
+   
+   private static int CKPT_THRSHLD=4;
+   
    /**
     * Creates a new transaction and its associated 
     * recovery and concurrency managers.
@@ -31,11 +42,14 @@ public class Transaction {
     * {@link simpledb.server.SimpleDB#init(String)} or 
     * {@link simpledb.server.SimpleDB#initFileLogAndBufferMgr(String)} or
     * is called first.
+ * @throws InterruptedException 
     */
-   public Transaction() {
+   public Transaction()  {
       txnum       = nextTxNumber();
+      dealWithCheckPoint(txnum);
+      incrementActiveTXcount();
       recoveryMgr = new RecoveryMgr(txnum);
-      concurMgr   = new ConcurrencyMgr();
+      concurMgr   = new ConcurrencyMgr();    
    }
    
    /**
@@ -49,6 +63,7 @@ public class Transaction {
       concurMgr.release();
       myBuffers.unpinAll();
       System.out.println("transaction " + txnum + " committed");
+      decrementActiveTXcount();
    }
    
    /**
@@ -63,6 +78,7 @@ public class Transaction {
       concurMgr.release();
       myBuffers.unpinAll();
       System.out.println("transaction " + txnum + " rolled back");
+      decrementActiveTXcount();
    }
    
    /**
@@ -197,10 +213,45 @@ public class Transaction {
       unpin(blk);
       return blk;
    }
+      
+   public void listLog(){  // FOR DEBUG PURPOSES..
+	   recoveryMgr.listLog();
+   }
    
    private static synchronized int nextTxNumber() {
       nextTxNum++;
       System.out.println("new transaction: " + nextTxNum);
       return nextTxNum;
+   }
+   
+   // Bir thread'in TX.class.notify() fonk cagirabilmesi için TX.class objesinin monitorunu(lock) almasi gerek. 
+   //Bunu da ancak sychnronized ile yapabilriz..Aksi takdirde IllegalMonitorException olur.
+   private static synchronized void decrementActiveTXcount(){  
+	   activeTXCount--;
+	   Transaction.class.notifyAll(); 
+   }
+   
+   // bunun synch. olmasýna gerek yok. Cunku thread wait veya notify cagirmiyor...
+   private static synchronized void incrementActiveTXcount(){
+	   activeTXCount++;
+   }
+   private static synchronized void dealWithCheckPoint(int txnum){  //
+	   try {
+		   while(Qcheckpointing)
+			   Transaction.class.wait();   // sleep while CKPT process
+		   if(txnum%CKPT_THRSHLD ==0){
+			   Qcheckpointing=true;
+			   while(activeTXCount>0)
+				   Transaction.class.wait();
+			   LogRecord rec=new CheckpointRecord();
+			   int lsn=rec.writeToLog();
+			   SimpleDB.logMgr().flush(lsn);
+			   Qcheckpointing=false;
+			   Transaction.class.notifyAll();  // wake up all waiting TXs that pops up during CKPT process.
+		   }
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			throw new LockAbortException();
+		}
    }
 }
