@@ -2,6 +2,8 @@ package simpledb.tx.recovery;
 
 import static simpledb.tx.recovery.LogRecord.CHECKPOINT;
 import static simpledb.tx.recovery.LogRecord.COMMIT;
+import static simpledb.tx.recovery.LogRecord.ENDNQCHECKPOINT;
+import static simpledb.tx.recovery.LogRecord.NQCHECKPOINT;
 import static simpledb.tx.recovery.LogRecord.ROLLBACK;
 import static simpledb.tx.recovery.LogRecord.SETINT;
 import static simpledb.tx.recovery.LogRecord.SETSTRING;
@@ -44,6 +46,10 @@ public class LogRecordForwardIterator implements Iterator<LogRecord> {
 	            return new SetIntRecord(rec);
 	         case SETSTRING:
 	            return new SetStringRecord(rec);
+	         case NQCHECKPOINT:
+	             return new NQCheckpointRecord(rec);
+	         case ENDNQCHECKPOINT:
+	        	 return new EndNQCheckpointRecord(rec);
 	         default:
 	            return null;
 	      }

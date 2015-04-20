@@ -12,6 +12,9 @@ import java.util.*;
  */
 public class RecoveryMgr {
    private int txnum;
+   
+   private boolean passEndNQCKPT=false;
+   Set<Integer> NQCKPTrecoverList = new HashSet<Integer>();
 
    /**
     * Creates a recovery manager for the specified transaction.
@@ -123,11 +126,31 @@ public class RecoveryMgr {
     */
    private void doRecover() {
       Collection<Integer> finishedTxs = new ArrayList<Integer>();
+      
       Iterator<LogRecord> iter = new LogRecordIterator();
       while (iter.hasNext()) {
          LogRecord rec = iter.next();
          if (rec.op() == CHECKPOINT)
             return;
+         if (rec.op() == ENDNQCHECKPOINT)
+        	 passEndNQCKPT=true;
+         if (rec.op() == NQCHECKPOINT){
+        	 if(passEndNQCKPT) {
+        		 passEndNQCKPT=false;
+        		 return;
+        	 }
+        	 HashSet<Integer> activeTxs= (HashSet<Integer>) (((NQCheckpointRecord)rec).getActiveTxs());
+        	 Iterator<Integer> it=activeTxs.iterator();
+        	 while(it.hasNext()){
+        		 Integer item=it.next();
+        		 if(!finishedTxs.contains(item)) NQCKPTrecoverList.add(item);
+        	 }
+         }
+         if (NQCKPTrecoverList.contains(rec.txNumber())){
+             rec.undo(txnum);
+             NQCKPTrecoverList.remove(rec.txNumber());
+             if(NQCKPTrecoverList.isEmpty()) return;
+         }
          if (rec.op() == COMMIT || rec.op() == ROLLBACK)
             finishedTxs.add(rec.txNumber());
          else if (!finishedTxs.contains(rec.txNumber()))

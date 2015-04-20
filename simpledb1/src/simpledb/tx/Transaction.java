@@ -7,7 +7,9 @@ import simpledb.server.SimpleDB;
 import simpledb.file.Block;
 import simpledb.buffer.*;
 import simpledb.tx.recovery.CheckpointRecord;
+import simpledb.tx.recovery.EndNQCheckpointRecord;
 import simpledb.tx.recovery.LogRecord;
+import simpledb.tx.recovery.NQCheckpointRecord;
 import simpledb.tx.recovery.RecoveryMgr;
 import simpledb.tx.concurrency.ConcurrencyMgr;
 import simpledb.tx.concurrency.LockAbortException;
@@ -26,10 +28,18 @@ public class Transaction {
    private int txnum;
    private BufferList myBuffers = new BufferList();
    
-   private static int activeTXCount = 0;
-   private static boolean Qcheckpointing = false;
+//   private static int activeTXCount = 0;
+   private static boolean NQcheckpointing = false;
    
    private static int CKPT_THRSHLD=4;
+   
+//   private static List<Integer> activeTxs = new ArrayList<Integer>();
+//   private static List<Integer> TxsDuringNQCKPT = new ArrayList<Integer>();
+   private static Set<Integer> activeTxs = new HashSet<Integer>();
+   private static Set<Integer> TxsDuringNQCKPT = new HashSet<Integer>();
+ 
+   
+
    
    /**
     * Creates a new transaction and its associated 
@@ -46,8 +56,9 @@ public class Transaction {
     */
    public Transaction()  {
       txnum       = nextTxNumber();
-      dealWithCheckPoint(txnum);
-      incrementActiveTXcount();
+      dealWithCheckpoint(txnum);
+      addToActiveTxs(txnum);  //  NQCKPT'yi tetikleyen TX'ni activeTXs listesine koymanin bir manasi yok..
+//      incrementActiveTXcount();
       recoveryMgr = new RecoveryMgr(txnum);
       concurMgr   = new ConcurrencyMgr();    
    }
@@ -63,7 +74,8 @@ public class Transaction {
       concurMgr.release();
       myBuffers.unpinAll();
       System.out.println("transaction " + txnum + " committed");
-      decrementActiveTXcount();
+//      decrementActiveTXcount();
+      deleteFromActiveTxs(txnum);
    }
    
    /**
@@ -78,7 +90,8 @@ public class Transaction {
       concurMgr.release();
       myBuffers.unpinAll();
       System.out.println("transaction " + txnum + " rolled back");
-      decrementActiveTXcount();
+//      decrementActiveTXcount();
+      deleteFromActiveTxs(txnum);
    }
    
    /**
@@ -224,34 +237,69 @@ public class Transaction {
       return nextTxNum;
    }
    
+// This method is called by commit and rollback
+	private static synchronized void deleteFromActiveTxs(int txnum) {
+		if(NQcheckpointing){
+			if(TxsDuringNQCKPT.remove(new Integer(txnum)))
+					return;
+			if(activeTxs.remove(new Integer(txnum))){
+				if(activeTxs.isEmpty()){
+					LogRecord rec = new EndNQCheckpointRecord();
+					int lsn = rec.writeToLog();
+					SimpleDB.logMgr().flush(lsn);
+					NQcheckpointing=false;
+					activeTxs=new HashSet<Integer>(TxsDuringNQCKPT);
+					TxsDuringNQCKPT.clear();
+				}
+				else
+					return;					
+			}					
+			else 
+				throw new RuntimeException("NQ-CKPT INTERNAL ERROR.");			
+		}
+		
+		// if we are here; then we are not in NQCKPT process OR NQCKPT has ended. The last active TX that calls this function should not be in NEW activeTxs Set.  
+		activeTxs.remove(new Integer(txnum));  
+		return;
+		
+	}
+	
+
+	private static synchronized void addToActiveTxs(int txnum) {
+		if(!NQcheckpointing)
+			activeTxs.add(new Integer(txnum));
+		else
+			TxsDuringNQCKPT.add(new Integer(txnum));
+	}
+
+   
+   
    // Bir thread'in TX.class.notify() fonk cagirabilmesi için TX.class objesinin monitorunu(lock) almasi gerek. 
    //Bunu da ancak sychnronized ile yapabilriz..Aksi takdirde IllegalMonitorException olur.
-   private static synchronized void decrementActiveTXcount(){  
-	   activeTXCount--;
-	   Transaction.class.notifyAll(); 
-   }
+//   private static synchronized void decrementActiveTXcount(){  
+//	   activeTXCount--;
+//	   Transaction.class.notifyAll(); 
+//   }
+//   
+//   // bunun synch. olmasýna gerek yok. Cunku thread wait veya notify cagirmiyor...
+//   private static synchronized void incrementActiveTXcount(){
+//	   activeTXCount++;
+//   }
    
-   // bunun synch. olmasýna gerek yok. Cunku thread wait veya notify cagirmiyor...
-   private static synchronized void incrementActiveTXcount(){
-	   activeTXCount++;
-   }
-   private static synchronized void dealWithCheckPoint(int txnum){  //
-	   try {
-		   while(Qcheckpointing)
-			   Transaction.class.wait();   // sleep while CKPT process
-		   if(txnum%CKPT_THRSHLD ==0){
-			   Qcheckpointing=true;
-			   while(activeTXCount>0)
-				   Transaction.class.wait();
-			   LogRecord rec=new CheckpointRecord();
-			   int lsn=rec.writeToLog();
-			   SimpleDB.logMgr().flush(lsn);
-			   Qcheckpointing=false;
-			   Transaction.class.notifyAll();  // wake up all waiting TXs that pops up during CKPT process.
-		   }
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			throw new LockAbortException();
+	private static synchronized void dealWithCheckpoint(int txnum) {
+		if (txnum % CKPT_THRSHLD == 0) {
+			LogRecord rec = new NQCheckpointRecord(activeTxs);
+			int lsn = rec.writeToLog();
+			SimpleDB.logMgr().flush(lsn);
+			NQcheckpointing = true;
+			if (activeTxs.isEmpty()) { // KRITIK: Eger CKPT processi baslarken
+										// activeTX yoksa. Hemen END CKPT yaz..
+				rec = new EndNQCheckpointRecord();
+				lsn = rec.writeToLog();
+				SimpleDB.logMgr().flush(lsn);
+				NQcheckpointing = false;
+			}
 		}
-   }
+	}
+
 }
