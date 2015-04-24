@@ -11,9 +11,15 @@ public interface LogRecord {
    /**
     * The six different types of log record
     */
-   static final int CHECKPOINT = 0, START = 1,
-      COMMIT = 2, ROLLBACK  = 3,
-      SETINT = 4, SETSTRING = 5;
+   static final int
+      PASSIVE_CHECKPOINT = 0,
+      ACTIVE_CHECKPOINT_INITIATE = 1,
+      ACTIVE_CHECKPOINT_FINALIZE = 2,
+      START = 3,
+      COMMIT = 4,
+      ROLLBACK  = 5,
+      SETINT = 6,
+      SETSTRING = 7;
    
    static final LogMgr logMgr = SimpleDB.logMgr();
    

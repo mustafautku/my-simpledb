@@ -3,36 +3,36 @@ package simpledb.tx.recovery;
 import simpledb.log.BasicLogRecord;
 
 /**
- * The CHECKPOINT log record.
+ * The PASSIVE_CHECKPOINT log record.
  * @author Edward Sciore
  */
-class CheckpointRecord implements LogRecord {
+class PassiveCheckpointRecord implements LogRecord {
    
    /**
     * Creates a quiescent checkpoint record.
     */
-   public CheckpointRecord() {}
+   public PassiveCheckpointRecord() {}
    
    /**
     * Creates a log record by reading no other values 
     * from the basic log record.
     * @param rec the basic log record
     */
-   public CheckpointRecord(BasicLogRecord rec) {}
+   public PassiveCheckpointRecord(BasicLogRecord rec) {}
    
    /** 
     * Writes a checkpoint record to the log.
-    * This log record contains the CHECKPOINT operator,
+    * This log record contains the PASSIVE_CHECKPOINT operator,
     * and nothing else.
     * @return the LSN of the last log value
     */
    public int writeToLog() {
-      Object[] rec = new Object[] {CHECKPOINT};
+      Object[] rec = new Object[] {PASSIVE_CHECKPOINT};
       return logMgr.append(rec);
    }
    
    public int op() {
-      return CHECKPOINT;
+      return PASSIVE_CHECKPOINT;
    }
    
    /**
@@ -50,6 +50,6 @@ class CheckpointRecord implements LogRecord {
    public void undo(int txnum) {}
    
    public String toString() {
-      return "<CHECKPOINT>";
+      return "<PASSIVE_CHECKPOINT>";
    }
 }

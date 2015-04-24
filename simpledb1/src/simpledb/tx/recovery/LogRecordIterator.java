@@ -33,8 +33,8 @@ class LogRecordIterator implements Iterator<LogRecord> {
       BasicLogRecord rec = iter.next();
       int op = rec.nextInt();
       switch (op) {
-         case CHECKPOINT:
-            return new CheckpointRecord(rec);
+         case PASSIVE_CHECKPOINT:
+            return new PassiveCheckpointRecord(rec);
          case START:
             return new StartRecord(rec);
          case COMMIT:

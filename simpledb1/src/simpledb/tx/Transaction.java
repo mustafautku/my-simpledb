@@ -3,8 +3,13 @@ package simpledb.tx;
 import simpledb.server.SimpleDB;
 import simpledb.file.Block;
 import simpledb.buffer.*;
+import simpledb.tx.recovery.LogRecord;
+import simpledb.tx.recovery.LogRecordForwardIterator;
 import simpledb.tx.recovery.RecoveryMgr;
 import simpledb.tx.concurrency.ConcurrencyMgr;
+
+import java.util.Iterator;
+import java.util.logging.Logger;
 
 /**
  * Provides transaction management for clients,
@@ -13,6 +18,8 @@ import simpledb.tx.concurrency.ConcurrencyMgr;
  * @author Edward Sciore
  */
 public class Transaction {
+   private static Logger logger = LogMan.getLogger();
+
    private static int nextTxNum = 0;
    private static final int END_OF_FILE = -1;
    private RecoveryMgr    recoveryMgr;
@@ -34,8 +41,8 @@ public class Transaction {
     */
    public Transaction() {
       txnum       = nextTxNumber();
-      recoveryMgr = new RecoveryMgr(txnum);
-      concurMgr   = new ConcurrencyMgr();
+      concurMgr   = new ConcurrencyMgr(this);
+      recoveryMgr = new RecoveryMgr(txnum, concurMgr);
    }
    
    /**
@@ -203,4 +210,13 @@ public class Transaction {
       System.out.println("new transaction: " + nextTxNum);
       return nextTxNum;
    }
+
+   public void listLog(){
+      Iterator<LogRecord> iter = new LogRecordForwardIterator();
+      while (iter.hasNext()) {
+         LogRecord rec = iter.next();
+         System.out.println(rec.toString());
+      }
+   }
+
 }
