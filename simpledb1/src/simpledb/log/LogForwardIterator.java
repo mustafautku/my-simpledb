@@ -1,8 +1,11 @@
 package simpledb.log;
 
 import static simpledb.file.Page.INT_SIZE;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import simpledb.file.Block;
+import simpledb.file.FileMgr;
 import simpledb.file.Page;
 
 /**
@@ -11,10 +14,12 @@ import simpledb.file.Page;
  * 
  * @author Edward Sciore
  */
-class LogIterator implements Iterator<BasicLogRecord>{
+class LogForwardIterator implements Iterator<BasicLogRecord>{
 	private Block blk;
 	private Page pg = new Page();
 	private int currentrec;
+	private ArrayList<Integer> records = new ArrayList<Integer>();
+	private int index = 0;
 
 	/**
 	 * Creates an iterator for the records in the log file,
@@ -22,10 +27,15 @@ class LogIterator implements Iterator<BasicLogRecord>{
 	 * This constructor is called exclusively by
 	 * {@link LogMgr#iterator()}.
 	 */
-	LogIterator(Block blk){
+	LogForwardIterator(Block blk){
 		this.blk = blk;
 		pg.read(blk);
 		currentrec = pg.getInt(LogMgr.LAST_POS);
+		while(currentrec != 0){
+			currentrec = pg.getInt(currentrec);
+			records.add(currentrec + INT_SIZE);
+		}
+		Collections.reverse(records);
 	}
 
 	/**
@@ -34,7 +44,7 @@ class LogIterator implements Iterator<BasicLogRecord>{
 	 * @return true if there is an earlier record	
 	 */
 	public boolean hasNext(){
-		return currentrec > 0 || blk.number() > 0;
+		return (currentrec != records.get(records.size() - 1)) && (currentrec < Page.BLOCK_SIZE || blk.number() < FileMgr.getSize(blk.fileName()));
 	}
 
 	/**
@@ -45,10 +55,14 @@ class LogIterator implements Iterator<BasicLogRecord>{
 	 * @return the next earliest log record
 	 */
 	public BasicLogRecord next(){
-		if(currentrec == 0)
+		if(currentrec == Page.BLOCK_SIZE)
 			moveToNextBlock();
-		currentrec = pg.getInt(currentrec);
-		return new BasicLogRecord(pg, currentrec + INT_SIZE);
+		//currentrec = pg.getInt(currentrec);
+		currentrec = records.get(index);
+		if(index < records.size() - 1){
+			index++;
+		}
+		return new BasicLogRecord(pg, currentrec);
 	}
 
 	public void remove(){
@@ -60,8 +74,8 @@ class LogIterator implements Iterator<BasicLogRecord>{
 	 * and positions it after the last record in that block.
 	 */
 	private void moveToNextBlock(){
-		blk = new Block(blk.fileName(), blk.number() - 1);
+		blk = new Block(blk.fileName(), blk.number() + 1);
 		pg.read(blk);
-		currentrec = pg.getInt(LogMgr.LAST_POS);
+		currentrec = pg.getInt(0);
 	}
 }

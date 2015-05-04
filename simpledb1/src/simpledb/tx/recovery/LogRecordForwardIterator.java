@@ -2,8 +2,6 @@ package simpledb.tx.recovery;
 
 import static simpledb.tx.recovery.LogRecord.CHECKPOINT;
 import static simpledb.tx.recovery.LogRecord.COMMIT;
-import static simpledb.tx.recovery.LogRecord.ENDNQCKPT;
-import static simpledb.tx.recovery.LogRecord.NQCHECKPOINT;
 import static simpledb.tx.recovery.LogRecord.ROLLBACK;
 import static simpledb.tx.recovery.LogRecord.SETINT;
 import static simpledb.tx.recovery.LogRecord.SETSTRING;
@@ -20,8 +18,8 @@ import simpledb.server.SimpleDB;
  * this class understands the meaning of the log records.
  * @author Edward Sciore
  */
-class LogRecordIterator implements Iterator<LogRecord>{
-	private Iterator<BasicLogRecord> iter = SimpleDB.logMgr().iterator();
+class LogRecordForwardIterator implements Iterator<LogRecord>{ // bu sýnýfý da log record ýteratordan kopyaladým
+	private Iterator<BasicLogRecord> iter = SimpleDB.logMgr().forwardIterator(); // sadece burayý forward yaptým
 
 	public boolean hasNext(){
 		return iter.hasNext();
@@ -42,10 +40,6 @@ class LogRecordIterator implements Iterator<LogRecord>{
 		switch (op){
 		case CHECKPOINT:
 			return new CheckpointRecord(rec);
-		case NQCHECKPOINT:
-			return new NQCheckpointRecord(rec);
-		case ENDNQCKPT:
-			return new NQEndCkptRecord(rec);
 		case START:
 			return new StartRecord(rec);
 		case COMMIT:
