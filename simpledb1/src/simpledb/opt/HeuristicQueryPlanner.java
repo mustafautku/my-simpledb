@@ -17,10 +17,10 @@ public class HeuristicQueryPlanner implements QueryPlanner {
    /**
     * Creates an optimized left-deep query plan using the following
     * heuristics.
-    * H1. Choose the smallest table (considering selection predicates)
+    * H6B. Choose the table (considering selection predicates) which has the highest reduction factor
     * to be first in the join order.
     * H2. Add the table to the join order which
-    * results in the smallest output.
+    * results in the "smallest output". Thus getLowestProductPlan is the same as 6A
     */
    public Plan createPlan(QueryData data, Transaction tx) {
       
@@ -49,32 +49,42 @@ public class HeuristicQueryPlanner implements QueryPlanner {
    private Plan getLowestSelectPlan() {
       TablePlanner besttp = null;
       Plan bestplan = null;
+      int bestReductionFactor=1;
       for (TablePlanner tp : tableplanners) {
-         Plan plan = tp.makeSelectPlan();
-         if (bestplan == null || plan.recordsOutput() < bestplan.recordsOutput()) {
+    	 int currRedFactor=tp.reductionFactor();
+         if (bestplan == null ||  currRedFactor> bestReductionFactor) {
             besttp = tp;
-            bestplan = plan;
+            bestReductionFactor=currRedFactor;
+            bestplan = tp.makeSelectPlan();
          }
       }
       tableplanners.remove(besttp);
       return bestplan;
    }
    
-   private Plan getLowestJoinPlan(Plan current) {
-      TablePlanner besttp = null;
-      Plan bestplan = null;
-      for (TablePlanner tp : tableplanners) {
-         Plan plan = tp.makeJoinPlan(current);
-         if (plan != null && (bestplan == null || plan.recordsOutput() < bestplan.recordsOutput())) {
-            besttp = tp;
-            bestplan = plan;
-         }
-      }
-      if (bestplan != null)
-         tableplanners.remove(besttp);
-      return bestplan;
-   }
-   
+	private Plan getLowestJoinPlan(Plan current) {
+		TablePlanner besttp = null;
+		Plan bestplan = null;
+		int bestReductionFactor = 1;
+		for (TablePlanner tp : tableplanners) {
+			Plan candidatePlan = tp.makeJoinPlan(current);
+			if (candidatePlan != null) {
+				int currRedFactor = tp.reductionFactor(current, candidatePlan); // current=currentPlan;
+																				// candidatePlan=Join(current,tp.plan) 
+				if (bestplan == null || currRedFactor > bestReductionFactor) {
+
+					besttp = tp;
+					bestplan = candidatePlan;
+					bestReductionFactor = currRedFactor;
+				}
+			}
+		}
+		if (bestplan != null)
+			tableplanners.remove(besttp);
+		return bestplan;
+	}
+	
+	
    private Plan getLowestProductPlan(Plan current) {
       TablePlanner besttp = null;
       Plan bestplan = null;

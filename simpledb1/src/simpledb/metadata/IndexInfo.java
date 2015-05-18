@@ -115,4 +115,8 @@ public class IndexInfo {
       }
       return sch;
    }
+   public String toString(){
+	   return fldname+"IDX";
+   }
 }
+   

@@ -81,6 +81,21 @@ class TablePlanner {
       return new MultiBufferProductPlan(current, p, tx);
    }
    
+   public int reductionFactor(){
+	   Predicate selectpred = mypred.selectPred(myschema);
+	   return (selectpred==null) ? 1:(selectpred.reductionFactor(myplan));
+   }
+   
+   public int reductionFactor(Plan current,Plan candidatePlan){ // JOIN(current,this) = candidatePlan
+	
+	   Predicate joinpred = mypred.joinPred(myschema, current.schema());
+	   if(joinpred==null){
+		   System.out.println("system error");
+		   System.exit(0);
+	   }
+	   return joinpred.reductionFactor(candidatePlan);
+   }
+   
    private Plan makeIndexSelect() {
       for (String fldname : indexes.keySet()) {
          Constant val = mypred.equatesWithConstant(fldname);

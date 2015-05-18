@@ -44,11 +44,11 @@ public class Test1 {
 		QueryData qd = psr.query();
 		
 		/*   DEBUG 1: BASIC PLANNER  ***/////
-		Plan p = new BasicQueryPlanner().createPlan(qd, tx);     
+//		Plan p = new BasicQueryPlanner().createPlan(qd, tx);     
 		/*   END OF DEBUG 1: BASIC PLANNER  ***/////
 		
 		/*   DEBUG 2: HEURISTIC PLANNER without IDX ***/////
-//		Plan p = new HeuristicQueryPlanner().createPlan(qd, tx);
+		Plan p = new HeuristicQueryPlanner().createPlan(qd, tx);
 		/*   END OF DEBUG 2: HEURISTIC PLANNER without IDX  ***/////
 		
 		/*   DEBUG 3: HEURISTIC PLANNER with MajorID_IDX ***/////
