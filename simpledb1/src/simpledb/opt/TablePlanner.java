@@ -82,18 +82,14 @@ class TablePlanner {
    }
    
    public int reductionFactor(){
-	   Predicate selectpred = mypred.selectPred(myschema);
-	   return (selectpred==null) ? 1:(selectpred.reductionFactor(myplan));
+	   Predicate selectPred= mypred.selectPred(myschema);
+	   return (selectPred==null) ? 1:selectPred.reductionFactor(myplan);  
    }
    
-   public int reductionFactor(Plan current,Plan candidatePlan){ // JOIN(current,this) = candidatePlan
+   public boolean joinsWith(Plan current) {
 	
-	   Predicate joinpred = mypred.joinPred(myschema, current.schema());
-	   if(joinpred==null){
-		   System.out.println("system error");
-		   System.exit(0);
-	   }
-	   return joinpred.reductionFactor(candidatePlan);
+	   Schema currsch = current.schema();
+	   return mypred.joinPred(myschema, currsch) !=null;
    }
    
    private Plan makeIndexSelect() {

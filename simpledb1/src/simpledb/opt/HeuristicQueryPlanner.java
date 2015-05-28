@@ -48,54 +48,42 @@ public class HeuristicQueryPlanner implements QueryPlanner {
    
    private Plan getLowestSelectPlan() {
       TablePlanner besttp = null;
-      Plan bestplan = null;
-      int bestReductionFactor=1;
-      for (TablePlanner tp : tableplanners) {
-    	 int currRedFactor=tp.reductionFactor();
-         if (bestplan == null ||  currRedFactor> bestReductionFactor) {
-            besttp = tp;
-            bestReductionFactor=currRedFactor;
-            bestplan = tp.makeSelectPlan();
+     
+      for (TablePlanner tp : tableplanners) {    	
+         if (besttp == null ||  tp.reductionFactor() > besttp.reductionFactor()) {           
+            besttp=tp;
          }
-      }
+      }      
       tableplanners.remove(besttp);
-      return bestplan;
+      return besttp.makeSelectPlan();
    }
    
 	private Plan getLowestJoinPlan(Plan current) {
 		TablePlanner besttp = null;
 		Plan bestplan = null;
-		int bestReductionFactor = 1;
 		for (TablePlanner tp : tableplanners) {
-			Plan candidatePlan = tp.makeJoinPlan(current);
-			if (candidatePlan != null) {
-				int currRedFactor = tp.reductionFactor(current, candidatePlan); // current=currentPlan;
-																				// candidatePlan=Join(current,tp.plan) 
-				if (bestplan == null || currRedFactor > bestReductionFactor) {
-
-					besttp = tp;
-					bestplan = candidatePlan;
-					bestReductionFactor = currRedFactor;
-				}
+			if ((besttp == null
+					|| (tp.reductionFactor() > besttp.reductionFactor()) && tp
+							.joinsWith(current))){
+				besttp = tp;
 			}
 		}
-		if (bestplan != null)
+		if (besttp != null) {
 			tableplanners.remove(besttp);
+			bestplan = besttp.makeJoinPlan(current);
+		}
 		return bestplan;
 	}
 	
 	
    private Plan getLowestProductPlan(Plan current) {
       TablePlanner besttp = null;
-      Plan bestplan = null;
       for (TablePlanner tp : tableplanners) {
-         Plan plan = tp.makeProductPlan(current);
-         if (bestplan == null || plan.recordsOutput() < bestplan.recordsOutput()) {
+         if (besttp == null || tp.reductionFactor()>besttp.reductionFactor()) {
             besttp = tp;
-            bestplan = plan;
          }
       }
       tableplanners.remove(besttp);
-      return bestplan;
+      return besttp.makeProductPlan(current);
    }
 }
