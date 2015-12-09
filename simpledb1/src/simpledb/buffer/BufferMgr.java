@@ -123,7 +123,10 @@ public class BufferMgr {
    public String listBuffer(){
 	   return bufferMgr.listBuffer();
    }
-     
+   
+   public boolean refreshment(){  // FOR ONLY DEBUG PURPOSES.
+	   return bufferMgr.refreshment();
+   }
    
    private boolean waitingTooLong(long starttime) {
       return System.currentTimeMillis() - starttime > MAX_TIME;

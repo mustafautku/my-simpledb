@@ -200,11 +200,15 @@ public class Buffer {
 		   s="E "; 
 		   return s;
 	   }
-	   s= bId +"\\"+ blk.number() + "\\";
+	   s= bId +"\\"+ blk.fileName()+"-"+blk.number() + "\\";  // show filename+RBN
 	   if(pins>0)
   		 s += pins + "  ";
 	   else
   		 s += "u  ";
 	   return s; 
+   }
+   
+   public int getBId(){
+	   return bId;
    }
 }

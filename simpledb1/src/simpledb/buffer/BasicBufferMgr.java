@@ -7,8 +7,10 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Stack;
 
 import simpledb.file.*;
+import simpledb.server.SimpleDB;
 
 /**
  * Manages the pinning and unpinning of buffers to blocks.
@@ -20,6 +22,7 @@ class BasicBufferMgr {
    private Map<Block,Buffer> bufferpool;
    private int numAvailable,numBuffs;
    private Queue<Buffer> unpinned=new LinkedList<Buffer>();
+   private Stack<Buffer> unpinned_mru=new Stack<Buffer>();
    
    /**
     * Creates a buffer manager having the specified number 
@@ -88,6 +91,7 @@ class BasicBufferMgr {
       if (!buff.isPinned()){
          numAvailable--;
          unpinned.remove(buff); //findExistingBuffer'den gelen 'unpin' bir buffer ise, unpin listesinden cýkarmak gerek.
+         unpinned_mru.remove(buff);
       }
       buff.pin();
       return buff;
@@ -135,7 +139,11 @@ class BasicBufferMgr {
       buff.unpin();
       if (!buff.isPinned()){
          numAvailable++;
-         unpinned.add(buff); // add to end of list
+         String buffer_policy=SimpleDB.BUFFER_REPLACEMENT_POLICY;
+         if(buffer_policy=="lru")
+        		 unpinned.add(buff); // add to end of list
+         else if(buffer_policy=="mru")
+        	 	unpinned_mru.push(buff);
       }
    }
    
@@ -154,18 +162,41 @@ class BasicBufferMgr {
 	}
    
    private Buffer chooseUnpinnedBuffer() {
-	   return unpinned.poll();
-      }
+	   String buffer_policy= SimpleDB.BUFFER_REPLACEMENT_POLICY;
+	   if(buffer_policy=="lru")
+		   return unpinned.poll();
+	   else if(buffer_policy=="mru")
+		   return unpinned_mru.pop();
+	   return null;
+   }
    
    
    String listBuffer(){
 		String s = "";
-		Iterable<Buffer> buffers = bufferpool.values();
-		Iterator<Buffer> it = buffers.iterator();
-		while (it.hasNext()) {
-			Buffer buff = it.next();
-			s += buff.listBuffer();
+//		Iterable<Buffer> buffers = bufferpool.values();
+		Collection<Buffer> list =bufferpool.values();
+		
+		for(int i=0;i<numBuffs;i++){
+			Iterator<Buffer> it=list.iterator();
+			while (it.hasNext()) {
+				Buffer buff = it.next();
+				if(buff.getBId()==i){
+					s += buff.listBuffer();
+					break;
+				}
+			}
 		}
 		return s;
+   }
+   
+   synchronized boolean refreshment(){
+	   if(unpinned.size()==bufferpool.size() || unpinned_mru.size()==bufferpool.size()){
+		   bufferpool.clear();
+		   unpinned.clear();
+		   unpinned_mru.clear();
+		   return true;
+	   }
+	   return false;
+	   
    }
 }

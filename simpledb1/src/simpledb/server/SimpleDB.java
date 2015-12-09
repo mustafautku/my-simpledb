@@ -25,11 +25,15 @@ import simpledb.index.planner.IndexUpdatePlanner;
 public class SimpleDB {
    public static int BUFFER_SIZE = 8;
    public static String LOG_FILE = "simpledb.log";
+   public static String BUFFER_REPLACEMENT_POLICY = "mru";
    
    private static FileMgr     fm;
    private static BufferMgr   bm;
    private static LogMgr      logm;
    private static MetadataMgr mdm;
+   
+   private static QueryPlanner  qplanner =null;
+   private static UpdatePlanner uplanner = null;
    
    /**
     * Initializes the system.
@@ -99,9 +103,23 @@ public class SimpleDB {
     * Creates a planner for SQL commands.
     * To change how the planner works, modify this method.
     * @return the system's planner for SQL commands
-    */public static Planner planner() {
-      QueryPlanner  qplanner = new BasicQueryPlanner();
-      UpdatePlanner uplanner = new BasicUpdatePlanner();
+    */public static Planner planner(String whichPlanner) {
+		if (whichPlanner.equals("basic")) {
+			qplanner = new BasicQueryPlanner();
+			uplanner = new BasicUpdatePlanner();
+		}
+		else if(whichPlanner.equals("heuristic1")){
+			qplanner = new HeuristicQueryPlanner();
+			uplanner = new BasicUpdatePlanner();
+		}
       return new Planner(qplanner, uplanner);
    }
+    
+    public static Planner planner() {
+    	if(qplanner==null){
+    		qplanner = new BasicQueryPlanner();
+			uplanner = new BasicUpdatePlanner();
+    	}
+        return new Planner(qplanner, uplanner);
+     }
 }

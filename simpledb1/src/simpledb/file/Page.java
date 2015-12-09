@@ -42,7 +42,7 @@ public class Page {
     * to create and test databases having a lot of blocks.
     * A more realistic value would be 4K.
     */
-   public static final int BLOCK_SIZE = 400;
+   public static final int BLOCK_SIZE = 800;
    
    /**
     * The size of an integer in bytes.
