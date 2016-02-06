@@ -62,7 +62,16 @@ public class BasicUpdatePlanner implements UpdatePlanner {
       return 0;
    }
    public int executeCreateIndex(CreateIndexData data, Transaction tx) {
-      SimpleDB.mdMgr().createIndex(data.indexName(), data.tableName(), data.fieldName(), tx);
-      return 0;  
+     return SimpleDB.mdMgr().createIndex(data.indexName(), data.tableName(), data.fieldName(),data.idxType(), tx); //default btree
+//      return 0;  
    }
+   
+   public int executeDropIndex(DropIndexData data, Transaction tx){
+	   return SimpleDB.mdMgr().dropIndex(data.indexName(), data.tableName(), data.fieldName(),data.idxType(), tx); //default btree
+   }
+   
+   public int executeDropIndexAll(DropIndexData data, Transaction tx){
+	   return SimpleDB.mdMgr().dropIndex(null, data.tableName(), null,null, tx); //default btree
+   }
+   
 }

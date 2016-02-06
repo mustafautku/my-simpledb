@@ -63,4 +63,8 @@ public interface UpdatePlanner {
     * @return the number of affected records
     */
    public int executeCreateIndex(CreateIndexData data, Transaction tx);
+   
+   //utku
+   public int executeDropIndex(DropIndexData data, Transaction tx);
+   
 }

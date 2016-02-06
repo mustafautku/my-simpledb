@@ -3,6 +3,8 @@ package simpledb.parse;
 import java.util.*;
 import java.io.*;
 
+
+
 /**
  * The lexical analyzer.
  * @author Edward Sciore
@@ -146,9 +148,9 @@ public class Lexer {
       }
    }
    
-   private void initKeywords() {
+private void initKeywords() {
       keywords = Arrays.asList("select", "from", "where", "and",
                                "insert", "into", "values", "delete", "update", "set", 
-                               "create", "table", "int", "varchar", "view", "as", "index", "on");
+                               "create", "table", "int", "varchar", "view", "as", "index", "on", "btree","shash" );  //IndexType.BTREE.toString(), IndexType.SHASH.toString()
    }
 }

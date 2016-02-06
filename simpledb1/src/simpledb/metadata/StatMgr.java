@@ -12,7 +12,13 @@ import java.util.*;
  * and periodically refreshes it.
  * @author Edward Sciore
  */
-class StatMgr {
+
+/**
+ * setStatInfo is added for loading requested V() stats.
+ * @author mustafautku
+ *
+ */
+public class StatMgr {
    private TableMgr tblMgr;
    private Map<String,StatInfo> tablestats;
    private int numcalls;
@@ -35,17 +41,28 @@ class StatMgr {
     * @param tx the calling transaction
     * @return the statistical information about the table
     */
+   
+   
    public synchronized StatInfo getStatInfo(String tblname, TableInfo ti, Transaction tx) {
       numcalls++;
-      if (numcalls > 100)
+//      if (numcalls > 100)    // Increase the update_stat period in order to keep manully-stored field stats (V()s)
+      if (numcalls > 500)
          refreshStatistics(tx);
       StatInfo si = tablestats.get(tblname);
       if (si == null) {
-         si = calcTableStats(ti, tx);
+         si = calcTableStats(ti,null, tx);
          tablestats.put(tblname, si);
       }
       return si;
    }
+   
+   // This function stored the requested V() values manually from tests.
+	public synchronized void setStatInfo(String tblname, TableInfo ti,
+			Map<String, Integer> fieldstats, Transaction tx) {
+
+		StatInfo si = calcTableStats(ti, fieldstats, tx);
+		tablestats.put(tblname, si);
+	}
    
    private synchronized void refreshStatistics(Transaction tx) {
       tablestats = new HashMap<String,StatInfo>();
@@ -55,13 +72,13 @@ class StatMgr {
       while(tcatfile.next()) {
          String tblname = tcatfile.getString("tblname");
          TableInfo md = tblMgr.getTableInfo(tblname, tx);
-         StatInfo si = calcTableStats(md, tx);
+         StatInfo si = calcTableStats(md,null, tx); // ATT.: refresh aldýysa V(.) deðerlerini kaybedidiyoruz. O yüzden numcalls 100 --> 500'e çektim..
          tablestats.put(tblname, si);
       }
       tcatfile.close();
    }
    
-   private synchronized StatInfo calcTableStats(TableInfo ti, Transaction tx) {
+   private synchronized StatInfo calcTableStats(TableInfo ti, Map<String,Integer> fieldstats,Transaction tx) {
       int numRecs = 0;
       RecordFile rf = new RecordFile(ti, tx);
       int numblocks = 0;
@@ -70,6 +87,6 @@ class StatMgr {
          numblocks = rf.currentRid().blockNumber() + 1;
       }
       rf.close();
-      return new StatInfo(numblocks, numRecs);
+      return new StatInfo(numblocks, numRecs,fieldstats);
    }
 }

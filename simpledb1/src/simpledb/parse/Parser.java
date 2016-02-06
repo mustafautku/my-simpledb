@@ -3,13 +3,29 @@ package simpledb.parse;
 import java.util.*;
 import simpledb.query.*;
 import simpledb.record.Schema;
+import simpledb.server.SimpleDB;
+
 
 /**
  * The SimpleDB parser.
  * @author Edward Sciore
  */
+
+/**
+ * new function drop() is added.
+ * dropIndex, createIndex functions are modified. 
+ * Valid reate index commands:
+ * Crete index idxname on tablename(fieldname)
+ * Crete indextype idxname on tablename(fieldname)
+ * Drop index idxname on tablename(fieldname)
+ * Drop indexall on tablename
+
+ * @author mustafautku
+ *
+ */
 public class Parser {
-   private Lexer lex;
+ 
+private Lexer lex;
    
    public Parser(String s) {
       lex = new Lexer(s);
@@ -95,6 +111,8 @@ public class Parser {
          return delete();
       else if (lex.matchKeyword("update"))
          return modify();
+      else if (lex.matchKeyword("drop"))
+          return drop();
       else
          return create();
    }
@@ -108,7 +126,17 @@ public class Parser {
       else
          return createIndex();
    }
-   
+   //utku
+   private Object drop() {
+	      lex.eatKeyword("drop");
+	      // asagidakiler sonra eklenebilir. 
+//	      if (lex.matchKeyword("table"))
+//	         return dropTable();
+//	      else if (lex.matchKeyword("view"))
+//	         return dropView();
+//	      else
+	         return dropIndex();
+	   }
 // Method for parsing delete commands
    
    public DeleteData delete() {
@@ -232,6 +260,17 @@ public class Parser {
 //  Method for parsing create index commands
    
    public CreateIndexData createIndex() {
+	   String idxtype ="btree"; //default
+	   if (lex.matchKeyword("btree")) {
+	         lex.eatKeyword("btree");
+	         idxtype="btree";
+	      }
+	   else if (lex.matchKeyword("shash")) {
+	         lex.eatKeyword("shash");
+	         idxtype="shash";
+	      }
+	   else {}
+	
       lex.eatKeyword("index");
       String idxname = lex.eatId();
       lex.eatKeyword("on");
@@ -239,7 +278,41 @@ public class Parser {
       lex.eatDelim('(');
       String fldname = field();
       lex.eatDelim(')');
-      return new CreateIndexData(idxname, tblname, fldname);
+      return new CreateIndexData(idxname, tblname, fldname,idxtype);
+   }
+   
+   public DropIndexData dropIndex(){
+	   String idxtype ="btree"; //default
+	   if (lex.matchKeyword("btree")) {
+	         lex.eatKeyword("btree");
+	         idxtype="btree";
+	      }
+	   else if (lex.matchKeyword("shash")) {
+	         lex.eatKeyword("shash");
+	         idxtype="shash";
+	      }
+	   else {}
+	 
+	   if (lex.matchKeyword("index")) {
+	         lex.eatKeyword("index");
+	         String idxname = lex.eatId();
+	         lex.eatKeyword("on");
+	         String tblname = lex.eatId();
+	         lex.eatDelim('(');
+	         String fldname = field();
+	         lex.eatDelim(')');
+	         return new DropIndexData(idxname, tblname, fldname,idxtype);
+	         
+	      }
+	   else if (lex.matchKeyword("indexall")) {
+	         lex.eatKeyword("indexall");
+	         lex.eatKeyword("on");
+	         String tblname = lex.eatId();
+	         return new DropIndexData(null, tblname, null,idxtype);
+	         
+	      }
+	   else return null;
+
    }
 }
 

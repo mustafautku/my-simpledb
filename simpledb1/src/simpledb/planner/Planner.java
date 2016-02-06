@@ -54,6 +54,8 @@ public class Planner {
          return uplanner.executeCreateView((CreateViewData)obj, tx);
       else if (obj instanceof CreateIndexData)
          return uplanner.executeCreateIndex((CreateIndexData)obj, tx);
+      else if (obj instanceof DropIndexData)
+          return uplanner.executeDropIndex((DropIndexData)obj, tx);
       else
          return 0;
    }

@@ -3,21 +3,35 @@ package simpledb.opt;
 import simpledb.tx.Transaction;
 import simpledb.record.Schema;
 import simpledb.query.*;
+import simpledb.index.Index;
 import simpledb.index.query.*;
 import simpledb.metadata.IndexInfo;
 import simpledb.multibuffer.MultiBufferProductPlan;
 import simpledb.server.SimpleDB;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.Map;
 
 /**
  * This class contains methods for planning a single table.
  * @author Edward Sciore
  */
+
+/**
+ * multiple indexes on the same field has been handled. Currently, since the system
+ * can only suppport = predicate for selection, both shash and btree indexes can be used. 
+ * No further analysis is need. After implemeting >,< predicates in the selection, the optimizer 
+ * should be carefull about selecting from mltiple indexes on the same field. 
+ * 
+ * makeIndexSelect and makeIndexjoin have been changed according to the above explanation.
+ * @author mustafautku
+ *
+ */
 class TablePlanner {
    private TablePlan myplan;
    private Predicate mypred;
    private Schema myschema;
-   private Map<String,IndexInfo> indexes;
+   private Map<String,ArrayList<IndexInfo>> indexes;
    private Transaction tx;
    
    /**
@@ -81,25 +95,43 @@ class TablePlanner {
       return new MultiBufferProductPlan(current, p, tx);
    }
    
-   private Plan makeIndexSelect() {
-      for (String fldname : indexes.keySet()) {
-         Constant val = mypred.equatesWithConstant(fldname);
-         if (val != null) {
-            IndexInfo ii = indexes.get(fldname);
-            return new IndexSelectPlan(myplan, ii, val, tx);
-         }
-      }
-      return null;
-   }
+	private Plan makeIndexSelect() {
+		for (String fldname : indexes.keySet()) {
+			Constant val = mypred.equatesWithConstant(fldname);
+			if (val != null) {
+				// IndexInfo ii = indexes.get(fldname);
+				ArrayList<IndexInfo> ii_list = indexes.get(fldname);
+				Iterator<IndexInfo> it = ii_list.iterator();
+				while (it.hasNext()) {
+					IndexInfo ii = it.next();
+					if (ii.getIndexType().equalsIgnoreCase("btree") || ii.getIndexType().equalsIgnoreCase("shash")) {
+						return new IndexSelectPlan(myplan, ii, val, tx);
+					}
+				}
+				// return new IndexSelectPlan(myplan, ii, val, tx);
+			}
+		}
+		return null;
+	}
    
    private Plan makeIndexJoin(Plan current, Schema currsch) {
       for (String fldname : indexes.keySet()) {
          String outerfield = mypred.equatesWithField(fldname);
          if (outerfield != null && currsch.hasField(outerfield)) {
-            IndexInfo ii = indexes.get(fldname);
-            Plan p = new IndexJoinPlan(current, myplan, ii, outerfield, tx);
-            p = addSelectPred(p);
-            return addJoinPred(p, currsch);
+//            IndexInfo ii = indexes.get(fldname);
+        	 ArrayList<IndexInfo> ii_list = indexes.get(fldname);
+				Iterator<IndexInfo> it = ii_list.iterator();
+				while (it.hasNext()) {
+					IndexInfo ii = it.next();
+					if (ii.getIndexType().equalsIgnoreCase("btree") || ii.getIndexType().equalsIgnoreCase("shash")) {
+						Plan p =  new IndexJoinPlan(current, myplan, ii, outerfield, tx);
+						p = addSelectPred(p);
+			            return addJoinPred(p, currsch);
+					}
+				}
+//            Plan p = new IndexJoinPlan(current, myplan, ii, outerfield, tx);
+//            p = addSelectPred(p);
+//            return addJoinPred(p, currsch);
          }
       }
       return null;

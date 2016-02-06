@@ -4,6 +4,8 @@ import simpledb.tx.Transaction;
 import simpledb.query.*;
 import simpledb.parse.*;
 import simpledb.server.SimpleDB;
+import simpledb.server.SimpleDB.PlannerType;
+
 import java.util.*;
 
 /**
@@ -23,7 +25,7 @@ public class BasicQueryPlanner implements QueryPlanner {
       for (String tblname : data.tables()) {
          String viewdef = SimpleDB.mdMgr().getViewDef(tblname, tx);
          if (viewdef != null)
-            plans.add(SimpleDB.planner().createQueryPlan(viewdef, tx));
+            plans.add(SimpleDB.planner(PlannerType.BASIC).createQueryPlan(viewdef, tx));
          else
             plans.add(new TablePlan(tblname, tx));
       }

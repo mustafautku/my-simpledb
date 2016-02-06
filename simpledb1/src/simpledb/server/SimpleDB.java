@@ -22,9 +22,21 @@ import simpledb.index.planner.IndexUpdatePlanner;
  * 
  * @author Edward Sciore
  */
+
+/**
+ * PlannerType enumis added. 
+ * planner is changed to switch bw different planner types.
+ * @author mustafautku
+ *
+ */
 public class SimpleDB {
    public static int BUFFER_SIZE = 8;
    public static String LOG_FILE = "simpledb.log";
+   
+   public enum PlannerType {
+	   BASIC,
+	   HEURISTIC
+	  }
    
    private static FileMgr     fm;
    private static BufferMgr   bm;
@@ -95,13 +107,23 @@ public class SimpleDB {
    public static LogMgr      logMgr()    { return logm; }
    public static MetadataMgr mdMgr()     { return mdm; }
    
-   /**
-    * Creates a planner for SQL commands.
-    * To change how the planner works, modify this method.
-    * @return the system's planner for SQL commands
-    */public static Planner planner() {
-      QueryPlanner  qplanner = new BasicQueryPlanner();
-      UpdatePlanner uplanner = new BasicUpdatePlanner();
-      return new Planner(qplanner, uplanner);
-   }
+   	/**
+	 * Creates a planner for SQL commands. To change how the planner works,
+	 * modify this method.
+	 * 
+	 * @return the system's planner for SQL commands
+	 */
+	public static Planner planner(PlannerType which) {
+		QueryPlanner qplanner = null;
+		UpdatePlanner uplanner = null;
+		if (which == PlannerType.BASIC) {
+			qplanner = new BasicQueryPlanner();
+			uplanner = new BasicUpdatePlanner();
+		} else if (which == PlannerType.HEURISTIC) {
+			qplanner = new HeuristicQueryPlanner();
+			uplanner = new IndexUpdatePlanner();
+		}
+		else {System.err.println("planner not exist!!"); System.exit(0);}
+		return new Planner(qplanner, uplanner);
+	}
 }

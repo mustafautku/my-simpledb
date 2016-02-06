@@ -21,8 +21,11 @@ import java.util.*;
  * determine the end of the file.
  * @author Edward Sciore
  */
+/*
+ * utku: getDBdirectory()  is added. IT is partially used for removing index files from file system.
+ */
 public class FileMgr {
-   private File dbDirectory;
+	private File dbDirectory;
    private boolean isNew;
    private Map<String,FileChannel> openFiles = new HashMap<String,FileChannel>();
    private int blocksRead=0, blocksWritten=0;
@@ -150,5 +153,9 @@ public class FileMgr {
 	public synchronized int blocksWritten() {
 		return blocksWritten;
 	}
-
+	public File getDBdirectory(){
+		return dbDirectory;
+	}
+	
+	
 }

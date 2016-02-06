@@ -18,11 +18,21 @@ import simpledb.index.btree.BTreeIndex; //in case we change to btree indexing
  * Its methods are essentially the same as those of Plan.
  * @author Edward Sciore
  */
+
+/**
+ * utku: For defining >1 indexes on the same field, I added indextype.
+ * 
+ *  
+ * @author mustafautku
+ *
+ */
 public class IndexInfo {
    private String idxname, fldname;
    private Transaction tx;
    private TableInfo ti;
    private StatInfo si;
+   
+   public String indextype;
    
    /**
     * Creates an IndexInfo object for the specified index.
@@ -31,10 +41,11 @@ public class IndexInfo {
     * @param fldname the name of the indexed field
     * @param tx the calling transaction
     */
-   public IndexInfo(String idxname, String tblname, String fldname,
+   public IndexInfo(String idxname, String tblname, String fldname,String indextype,
                     Transaction tx) {
       this.idxname = idxname;
       this.fldname = fldname;
+      this.indextype= indextype;
       this.tx = tx;
       ti = SimpleDB.mdMgr().getTableInfo(tblname, tx);
       si = SimpleDB.mdMgr().getStatInfo(tblname, ti, tx);
@@ -46,8 +57,16 @@ public class IndexInfo {
     */
    public Index open() {
       Schema sch = schema();
-      // Create new HashIndex for hash indexing
-      return new HashIndex(idxname, sch, tx);
+      
+      Schema idxsch = new Schema();
+		idxsch.addIntField("dataval");
+		idxsch.addIntField("block");
+		idxsch.addIntField("id");
+		if(indextype.equalsIgnoreCase("btree"))
+			return new BTreeIndex(idxname, idxsch, tx);
+		else if(indextype.equalsIgnoreCase("shash"))
+			return new HashIndex(idxname, sch, tx);
+		return null;
    }
    
    /**
@@ -65,8 +84,11 @@ public class IndexInfo {
       TableInfo idxti = new TableInfo("", schema());
       int rpb = BLOCK_SIZE / idxti.recordLength();
       int numblocks = si.recordsOutput() / rpb;
-      // Call HashIndex.searchCost for hash indexing
-      return HashIndex.searchCost(numblocks, rpb);
+      if(indextype.equalsIgnoreCase("btree"))
+			return BTreeIndex.searchCost(numblocks, rpb);
+      else if(indextype.equalsIgnoreCase("shash"))
+    	  return HashIndex.searchCost(numblocks, rpb);
+      return -1;
    }
    
    /**
@@ -92,6 +114,9 @@ public class IndexInfo {
          return Math.min(si.distinctValues(fldname), recordsOutput());
    }
    
+   public String getIndexType(){
+	   return indextype;
+   }
    /**
     * Returns the schema of the index records.
     * The schema consists of the dataRID (which is

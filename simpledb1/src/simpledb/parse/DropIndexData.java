@@ -1,22 +1,16 @@
 package simpledb.parse;
 
 /**
- * The parser for the <i>create index</i> statement.
- * @author Edward Sciore
- */
-
-/**
- * idxtype and its get func is added.
+ * A new class: The parser for the <i>drop index</i> statement.
  * @author mustafautku
- *
  */
-public class CreateIndexData {
+public class DropIndexData {
    private String idxname, tblname, fldname, idxtype;
    
    /**
     * Saves the table and field names of the specified index.
     */
-   public CreateIndexData(String idxname, String tblname, String fldname, String idxtype) {
+   public DropIndexData(String idxname, String tblname, String fldname, String idxtype) {
       this.idxname = idxname;
       this.tblname = tblname;
       this.fldname = fldname;
