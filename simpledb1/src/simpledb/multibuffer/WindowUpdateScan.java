@@ -48,17 +48,11 @@ public class WindowUpdateScan {
 		// Window bölgesini Update edeceðimiz için slotlarý formatlamamýz gerekiyor.
 		PageFormatter fmtr = new RecordFormatter(ti);
 		for (int i = startbnum; i <= endbnum; i++) {
-			tx.append(ti.fileName(), fmtr);
-		}
-		int size = tx.size(ti.fileName());  
-		for (int i = startbnum; i <= endbnum; i++) {
-			Block blk = new Block(filename, i);
+			Block blk = tx.append(ti.fileName(), fmtr);
 			RecordPage rp=new RecordPage(blk, ti, tx);
 			pages.add(rp);
-			while(rp.next())
-					System.out.print("");
 		}
-		
+		int size = tx.size(ti.fileName());  
 		beforeFirst();
 	}
 
