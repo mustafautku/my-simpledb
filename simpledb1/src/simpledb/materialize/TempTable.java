@@ -2,6 +2,7 @@ package simpledb.materialize;
 
 import simpledb.tx.Transaction;
 import simpledb.record.*;
+import simpledb.buffer.PageFormatter;
 import simpledb.query.*;
 
 /**
@@ -26,6 +27,11 @@ public class TempTable {
       String tblname = nextTableName();
       ti = new TableInfo(tblname, sch);
       this.tx = tx;
+      /*TempTable' ilk bloðu formatlanmýþ olarak ekliyor. MBSort'da RecordPAge seviyesinde eriþmek için yaptýk. 
+       * Evvelden temp dosyasýndaki RecordPage'lara eriþmiyorduk. TableScan(RecordFile) gerekli formatlamalarý yapýyordu.
+       */
+      PageFormatter fmtr= new RecordFormatter(ti);
+      tx.append(ti.fileName(), fmtr);
    }
    
    /**

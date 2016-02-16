@@ -11,7 +11,7 @@ import simpledb.buffer.PageFormatter;
  * empty records.
  * @author Edward Sciore
  */
-class RecordFormatter implements PageFormatter {
+public class RecordFormatter implements PageFormatter {
    private TableInfo ti;
    
    /**
