@@ -19,7 +19,7 @@ import simpledb.record.TempRecordPage;
 import simpledb.server.SimpleDB;
 import simpledb.tx.Transaction;
 
-public class Split1Merge2Test1 {
+public class TempRecordPageTest1 {
 	static Schema sch;
 	static List<String> sf;
 	/**
@@ -28,6 +28,8 @@ public class Split1Merge2Test1 {
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 		ServerInit1Table.initData("testExtSort");
+		
+		
 		MetadataMgr md = SimpleDB.mdMgr();
 		Transaction tx = new Transaction();
 		TableInfo ti = md.getTableInfo("student", tx);

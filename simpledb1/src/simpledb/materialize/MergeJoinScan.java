@@ -9,19 +9,25 @@ import simpledb.query.*;
 public class MergeJoinScan implements Scan {
    private Scan s1;
    private SortScan s2;
+//   private Scan s2;
    private String fldname1, fldname2;
    private Constant joinval = null;
    
    /**
     * Creates a mergejoin scan for the two underlying sorted scans.
     * @param s1 the LHS sorted scan
-    * @param s2 the RHS sorted scan
+    * @param s22 the RHS sorted scan
     * @param fldname1 the LHS join field
     * @param fldname2 the RHS join field
     */
-   public MergeJoinScan(Scan s1, SortScan s2, String fldname1, String fldname2) {
+//   public MergeJoinScan(Scan s1, SortScan s22, String fldname1, String fldname2) {
+   public MergeJoinScan(Scan s1, Scan s22, String fldname1, String fldname2) {
       this.s1 = s1;
-      this.s2 = s2;
+//      this.s2 = s22;
+      if(s22 instanceof SortScan2way)	     
+    	 this.s2 = (SortScan2way)s22;
+      else if(s22 instanceof SortScanKway)	     
+    	  this.s2 = (SortScanKway)s22;
       this.fldname1 = fldname1;
       this.fldname2 = fldname2;
       beforeFirst();

@@ -11,6 +11,12 @@ import simpledb.query.StringConstant;
 import simpledb.query.UpdateScan;
 import simpledb.tx.Transaction;
 
+
+/**
+ * This class is basically used to manipulate a buffer. Get/set functions and sorting within a page.
+ * @author mustafautku
+ *
+ */
 public class TempRecordPage extends RecordPage {
 	private Schema sch;
 

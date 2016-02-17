@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import simpledb.materialize.Split1Merge2SortPlan;
+import simpledb.materialize.SortPlan;
 import simpledb.query.Plan;
 import simpledb.query.ProjectPlan;
 import simpledb.query.Scan;
@@ -12,7 +12,7 @@ import simpledb.query.TablePlan;
 import simpledb.server.SimpleDB;
 import simpledb.tx.Transaction;
 
-public class Split1Merge2Test2 {
+public class ExtSortTest1 {
 
 	/**
 	 * @param args
@@ -22,6 +22,10 @@ public class Split1Merge2Test2 {
 		
 		SimpleDB.BUFFER_SIZE=4;  // This the minumum buffer pool size required. 2 for inputs + 2 for output file.
 		ServerInit1Table.initData("testExtSort");
+		SimpleDB.ExtSortParameters.splitK=0;
+		SimpleDB.ExtSortParameters.mergeK=2;
+		SimpleDB.ExtSortParameters.repSelK=0;
+		
 		Transaction tx = new Transaction();
 		Plan p1 = new TablePlan("student", tx);
 		List<String> sf = Arrays.asList("sid");
@@ -32,7 +36,7 @@ public class Split1Merge2Test2 {
 		s.close();
 		System.out.println("END OF FILE");
 
-		Split1Merge2SortPlan mbsp = new Split1Merge2SortPlan(p1, sf, tx);
+		SortPlan mbsp = new SortPlan(p1, sf, tx);
 		s = mbsp.open();
 		int counter=0;
 		int samerecordscounter=0;

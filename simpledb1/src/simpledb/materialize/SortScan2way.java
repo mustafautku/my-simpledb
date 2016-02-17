@@ -12,7 +12,14 @@ import java.util.*;
  * @author sciore
  *
  */
-public class SortScan implements Scan {
+
+/**
+ * SortScan2way sadece 2-way merge yapýyor. restore >1 scan olduðu zaman currentscan'i tam doðru bulamiyor.
+ * SortScankway k>=2 için doðru caliiyor.  
+ * @author mustafautku
+ *
+ */
+public class SortScan2way implements SortScan {
    private UpdateScan s1, s2=null, currentscan=null;
    private RecordComparator comp;
    private boolean hasmore1, hasmore2=false;
@@ -25,7 +32,7 @@ public class SortScan implements Scan {
     * @param runs the list of runs
     * @param comp the record comparator
     */
-   public SortScan(List<TempTable> runs, RecordComparator comp) {
+   public SortScan2way(List<TempTable> runs, RecordComparator comp) {
       this.comp = comp;
       s1 = (UpdateScan) runs.get(0).open();
       hasmore1 = s1.next();
@@ -146,5 +153,17 @@ public class SortScan implements Scan {
       s1.moveToRid(rid1);
       if (rid2 != null)
          s2.moveToRid(rid2);
+//      if (!hasmore1 && !hasmore2)
+//          return false;
+//       else if (hasmore1 && hasmore2) {
+//          if (comp.compare(s1, s2) < 0)
+//             currentscan = s1;
+//          else
+//             currentscan = s2;
+//       }
+//       else if (hasmore1)
+//          currentscan = s1;
+//       else if (hasmore2)
+//          currentscan = s2;
    }
 }

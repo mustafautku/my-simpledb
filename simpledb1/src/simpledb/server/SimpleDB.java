@@ -31,6 +31,12 @@ public class SimpleDB {
    private static LogMgr      logm;
    private static MetadataMgr mdm;
    
+   public static class ExtSortParameters{
+	   public static int splitK=0; // default is 0. K>0 means, "Split with usig K pages"
+	   public static int mergeK=2; // default is 2. Min use 2 pages.
+	   public static int repSelK=0; // default is 0, which means no rep sel. K>0 pages means rep sel with using K pages. 
+   }
+   
    /**
     * Initializes the system.
     * This method is called during system startup.

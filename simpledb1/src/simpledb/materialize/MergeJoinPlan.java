@@ -42,11 +42,19 @@ public class MergeJoinPlan implements Plan {
      * of the two sorted table scans.
      * @see simpledb.query.Plan#open()
      */
+//   public Scan open() {
+//      Scan s1 = p1.open();
+//      SortScan s2 = (SortScan) p2.open();
+//      return new MergeJoinScan(s1, s2, fldname1, fldname2);
+//   }
    public Scan open() {
-      Scan s1 = p1.open();
-      SortScan s2 = (SortScan) p2.open();
-      return new MergeJoinScan(s1, s2, fldname1, fldname2);
-   }
+	      Scan s1 = p1.open();
+	      Scan s2=p2.open();
+//	      if(s2 instanceof SortScan)	     
+	      return new MergeJoinScan(s1, (SortScan)s2, fldname1, fldname2);
+//	      else if(s2 instanceof Split1MergeKSortScan)	     
+//	    	  return new MergeJoinScan(s1, (Split1MergeKSortScan)s2, fldname1, fldname2);)
+	   }
    
    /**
     * Returns the number of block acceses required to
