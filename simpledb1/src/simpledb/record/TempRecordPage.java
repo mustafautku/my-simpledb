@@ -13,7 +13,9 @@ import simpledb.tx.Transaction;
 
 
 /**
- * This class is basically used to manipulate a buffer. Get/set functions and sorting within a page.
+ * This class is basically used to manipulate "only" a buffer. Get/set functions and sorting within a page.
+ * ChunkScan is more general, K=1,2,3,.... pages of chunk area to manipulate records. (sort, update,..)
+ * 
  * @author mustafautku
  *
  */

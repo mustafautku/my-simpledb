@@ -3,6 +3,9 @@ package simpledb.materialize;
 import simpledb.server.SimpleDB;
 import simpledb.tx.Transaction;
 import simpledb.record.*;
+import simpledb.file.FileMgr;
+import simpledb.multibuffer.ChunkHeap;
+import simpledb.multibuffer.ChunkScan;
 import simpledb.query.*;
 
 import java.util.*;
@@ -44,11 +47,21 @@ public class SortPlan implements Plan {
 		List<TempTable> runs = null;
 		int splitK = SimpleDB.ExtSortParameters.splitK;
 		int mergeK = SimpleDB.ExtSortParameters.mergeK;
+		int repSelK = SimpleDB.ExtSortParameters.repSelK;
+		
 		if (splitK == 0)
 			runs = splitIntoRuns(src);
-		else
+//		else if(splitK==1)  // KPages doðru çalýþýyor. Buna gerek kalmadi. Son olarak disk IO'larý noktasýndan karþýlaýtr. Orda da bir sorun yoksa bunu çýkarabilirisin.
+//			runs = splitIntoRunsWith1page(src);
+		else if(splitK>0)
 			runs = splitIntoRunsWithKpages(src, splitK);
+		else if(repSelK==-1)
+			runs = splitIntoRunsWithRepSelection11(src,repSelK);  // old version 1 page staged area.Buna gerek kalmadi. Son olarak disk IO'larý noktasýndan karþýlaýtr. Orda da bir sorun yoksa bunu çýkarabilirisin.
+		else if(repSelK>0)
+			runs = splitIntoRunsWithRepSelection(src,repSelK);  // K-page size staged area
+		
 		src.close();
+		System.out.println(runs.size() + " runs have been generated!! ");
 		if (mergeK == 1) {
 			while (runs.size() > 2)
 				runs = doAMergeIteration(runs);
@@ -124,31 +137,167 @@ public class SortPlan implements Plan {
       return temps;
    }
    
-   private List<TempTable> splitIntoRunsWithKpages(Scan src, int splitK) { // for now K=1
+   // split 1 page size. Internal sort.
+//   private List<TempTable> splitIntoRunsWith1page(Scan src) { 
+//		List<TempTable> temps = new ArrayList<TempTable>();
+//		src.beforeFirst();
+//		TempRecordPage rp = null;
+//		boolean ok = src.next();
+//		while (ok) {
+//			TempTable temp = new TempTable(sch, tx);
+//			temps.add(temp);
+//			TableInfo ti = temp.getTableInfo();
+//			rp = new TempRecordPage(ti, 0, tx);
+//			while (rp.insertFromScan(src))
+//				if (!src.next()) {
+//					ok = false;
+//					break;
+//				}
+//			rp.internalSort(sortfields);
+////			rp.printPage();
+//			rp.close();
+//		}
+//		if (rp != null)
+//			rp.close();
+//		return temps;
+//	}
+   
+// split K page size. Internal sort.
+   private List<TempTable> splitIntoRunsWithKpages(Scan src, int splitK) { 
 		List<TempTable> temps = new ArrayList<TempTable>();
 		src.beforeFirst();
-		TempRecordPage rp = null;
+		ChunkScan chunk = null;
 		boolean ok = src.next();
 		while (ok) {
-			TempTable temp = new TempTable(sch, tx);
-			temps.add(temp);
-			TableInfo ti = temp.getTableInfo();
-			rp = new TempRecordPage(ti, 0, tx);
-			while (rp.insertFromScan(src))
+//			TempTable temp = new TempTable(sch, tx);
+//			temps.add(temp);
+//			TableInfo ti = temp.getTableInfo();
+			chunk = new ChunkScan(splitK, sch, tx);
+			while (chunk.insertFromScan(src))
 				if (!src.next()) {
 					ok = false;
 					break;
 				}
-			rp.internalSort(sortfields);
-//			rp.printPage();
-			rp.close();
+			chunk.internalSort(sortfields);
+//			chunk.printChunk();
+			temps.add(chunk.getAsTempTable());			
 		}
-		if (rp != null)
-			rp.close();
+		
 		return temps;
 	}
+   // stage area is only 1 page size
+	private List<TempTable> splitIntoRunsWithRepSelection11(Scan src, int repSelK) {
+		List<TempTable> outputRuns = new ArrayList<TempTable>();
+		
+		src.beforeFirst();
+		src.next();
+		boolean moreRecords = true;
 
-   
+		TempTable temp = new TempTable(sch, tx);
+		TableInfo ti = temp.getTableInfo();
+		TempRecordPage stagingArea = new TempRecordPage(ti, 0, tx);
+		while (stagingArea.insertFromScan(src))
+			if (!src.next()) {
+				moreRecords = false;
+				break;
+			}
+		int minId = stagingArea.findSmallestFrom(-1, sortfields);
+
+		TempTable currentoutputRun = new TempTable(sch, tx);
+		UpdateScan currentoutputScan = currentoutputRun.open();
+		outputRuns.add(currentoutputRun);
+
+		while (minId >= 0) {
+			stagingArea.moveToId(minId);
+			stagingArea.copyToScan(currentoutputScan);
+			stagingArea.delete();
+			if (moreRecords) {
+				stagingArea.insertFromScan(src);
+				moreRecords = src.next();
+			}
+
+			minId = stagingArea.findSmallestAsBigAs(currentoutputScan, sortfields);
+			if (minId < 0) {
+				currentoutputScan.close();
+//				printRun(currentoutputRun);
+				currentoutputRun = new TempTable(sch, tx);
+				outputRuns.add(currentoutputRun);
+				currentoutputScan = currentoutputRun.open();
+				minId = stagingArea.findSmallestFrom(-1, sortfields);
+				if (minId < 0) {
+					currentoutputScan.close();
+					outputRuns.remove(currentoutputRun);
+				}
+			}
+		}
+		stagingArea.close();
+		src.close(); // close src scan to avoid unnecessary occupation of
+		// buffer.
+
+		return outputRuns;
+	}
+	
+	//stage area size is repSelK pages. repSelK=1-page-size is also OK.
+   private List<TempTable> splitIntoRunsWithRepSelection(Scan iscan, int repSelK) {
+		// INPUT
+		iscan.beforeFirst();
+		if(!iscan.next())
+			return null;
+		// OUTPUT
+		List<TempTable> outputRuns = new ArrayList<TempTable>();
+		TempTable currentoutputRun = new TempTable(sch, tx);
+		UpdateScan currentoutputScan = currentoutputRun.open();
+		outputRuns.add(currentoutputRun);
+
+		// STAGE AREA (HEAP AREA)
+		TableInfo ti = new TableInfo("", schema()); // DANGER !!!!!!
+		ChunkHeap stagingArea = new ChunkHeap(ti, 0, (repSelK-1), sortfields, tx);
+		
+		boolean moreRecords = true;
+		moreRecords = stagingArea.loadHeap(iscan);
+		if (moreRecords == false) {
+			stagingArea.flushHeap(currentoutputScan, true);
+			currentoutputScan.close();
+
+		} else {
+			while (true) {
+				stagingArea.copyToOutputScan(currentoutputScan);
+				while (stagingArea.insertIntoHeap(iscan)) {
+					stagingArea.copyToOutputScan(currentoutputScan);
+					if (!iscan.next()) {
+						moreRecords = false;
+						break;
+					}
+				}
+				// morerecords true or false, the root record is transfered output.
+				if (moreRecords) { // 2nd heap starts
+					currentoutputScan.close();				
+					stagingArea.loadHeap(null);
+					currentoutputRun = new TempTable(ti.schema(), tx);
+					currentoutputScan = currentoutputRun.open();
+					outputRuns.add(currentoutputRun);
+				} else { // "last-1" and "last" outputs.
+					boolean more = stagingArea.flushHeap(currentoutputScan, false);
+					currentoutputScan.close();
+					if (!more)  // it is possible 
+						break;
+					currentoutputRun = new TempTable(ti.schema(), tx);
+					currentoutputScan = currentoutputRun.open();
+					outputRuns.add(currentoutputRun);
+					stagingArea.flushHeap(currentoutputScan, true);
+					currentoutputScan.close();
+					break;
+				}
+			}
+		}
+		stagingArea.close();
+		iscan.close(); // close src scan to avoid unnecessary occupation of
+						// buffer.
+		return outputRuns;
+
+	}
+
+	
    private List<TempTable> doAMergeIteration(List<TempTable> runs) {
       List<TempTable> result = new ArrayList<TempTable>();
       while (runs.size() > 1) {
@@ -267,5 +416,29 @@ public class SortPlan implements Plan {
 			}
 		}
 		mins.clear();
+	}
+   
+   //utku
+   private void printRun(TempTable tt) {		
+		TableInfo ti = tt.getTableInfo();
+		FileMgr fm = SimpleDB.fileMgr();
+		int filesizeinblock = fm.size(ti.fileName());
+		for (int i = 0; i < filesizeinblock; i++) {
+			RecordPage rp = new TempRecordPage(ti, i, tx);
+			rp.moveToId(0);
+			while (true) {
+				// uncomment below prints to show the records..
+				// System.out.println("");
+				// for (String fldname : sch.fields()) {
+				// if (sch.type(fldname) == 4)
+				// System.out.print(rp.getInt(fldname) + " ");
+				// else
+				// System.out.print(rp.getString(fldname) + " ");
+				// }
+				if (rp.next() == false)
+					break;
+			}
+			rp.close();
+		}
 	}
 }

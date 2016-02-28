@@ -32,9 +32,9 @@ public class SimpleDB {
    private static MetadataMgr mdm;
    
    public static class ExtSortParameters{
-	   public static int splitK=0; // default is 0. K>0 means, "Split with usig K pages"
-	   public static int mergeK=2; // default is 2. Min use 2 pages.
-	   public static int repSelK=0; // default is 0, which means no rep sel. K>0 pages means rep sel with using K pages. 
+	   public static int splitK=0; // default is 0:do not use buffer pages. K>0 means: "Split with usig K pages". -1 means: force to use repsel
+	   public static int mergeK=2; // default is 2. Min use 2 pages. 1 means old version 2 way merge.
+	   public static int repSelK=0; // default is 0, which means no rep sel. K>0 pages means rep sel with using K pages. -1 means 1 pages size staged area with old version function.
    }
    
    /**
