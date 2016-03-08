@@ -54,6 +54,11 @@ public class Schema {
       addField(fldname, VARCHAR, length);
    }
    
+   //utku:
+   public void addDoubleField(String fldname) {
+	      addField(fldname, DOUBLE, 0);
+	   }
+   
    /**
     * Adds a field to the schema having the same
     * type and length as the corresponding field

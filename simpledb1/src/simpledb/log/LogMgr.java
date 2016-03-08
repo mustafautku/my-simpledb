@@ -104,6 +104,8 @@ public class LogMgr implements Iterable<BasicLogRecord> {
    private void appendVal(Object val) {
       if (val instanceof String)
          mypage.setString(currentpos, (String)val);
+      else if(val instanceof java.lang.Double)  //utku:
+    	  mypage.setDouble(currentpos, (java.lang.Double)val);
       else
          mypage.setInt(currentpos, (Integer)val);
       currentpos += size(val);
@@ -119,6 +121,8 @@ public class LogMgr implements Iterable<BasicLogRecord> {
          String sval = (String) val;
          return STR_SIZE(sval.length());
       }
+      else if(val instanceof java.lang.Double)  //utku:
+    	  return DOUBLE_SIZE;
       else
          return INT_SIZE;
    }

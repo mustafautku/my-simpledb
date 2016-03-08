@@ -86,6 +86,16 @@ public class RecoveryMgr {
       else
          return new SetStringRecord(txnum, blk, offset, oldval).writeToLog();
    }
+   
+   //utku:
+   public int setDouble(Buffer buff, int offset, double newval) {
+	      double oldval = buff.getDouble(offset);
+	      Block blk = buff.block();
+	      if (isTempBlock(blk))
+	         return -1;
+	      else
+	         return new SetDoubleRecord(txnum, blk, offset, oldval).writeToLog();
+	   }
 
    /**
     * Rolls back the transaction.

@@ -176,7 +176,7 @@ public class ChunkScan implements Scan {
 //	}
 	
 	// find an empty slot in the chunk. Always start searching from beginning. May be enhanced for big chunk area with additional search structures.
-	private boolean insert(){
+	public boolean insert(){
 		beforeFirst();
 		int curr=startbnum;
 		while(!rp.insert()){
@@ -267,7 +267,12 @@ public class ChunkScan implements Scan {
 		if (sch.type(fldname) == Types.INTEGER) {
 			Integer ival = (Integer) val.asJavaVal();
 			rp.setInt(fldname, ival.intValue());
-		} else {
+		} 
+		else if (sch.type(fldname) == Types.DOUBLE) {
+			Double dval = (Double) val.asJavaVal();
+			rp.setDouble(fldname, dval.doubleValue());
+		} 
+		else {
 			String sval = (String) val.asJavaVal();
 			rp.setString(fldname, sval);
 		}
@@ -288,17 +293,20 @@ public class ChunkScan implements Scan {
 	}
 	
 	public RID getRid() {
-		// TODO Auto-generated method stub
 		return new RID(current, rp.currentId());
 	}
 
 	public void moveToRid(RID rid) {
-		// TODO Auto-generated method stub
 		moveToBlock(rid.blockNumber());
 		rp.moveToId(rid.id());
 	}
 	
 	public void delete(){
 		rp.delete();
+	}
+	//utku
+	@Override
+	public double getDouble(String fldname) {
+		return rp.getDouble(fldname);
 	}
 }

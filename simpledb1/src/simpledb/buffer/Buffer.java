@@ -48,6 +48,10 @@ public class Buffer {
       return contents.getInt(offset);
    }
 
+   //utku:
+   public double getDouble(int offset) {
+	      return contents.getDouble(offset);
+	   }
    /**
     * Returns the string value at the specified offset of the
     * buffer's page.
@@ -102,6 +106,13 @@ public class Buffer {
       contents.setString(offset, val);
    }
 
+   //utku:
+   public void setDouble(int offset, double val, int txnum, int lsn) {
+	      modifiedBy = txnum;
+	      if (lsn >= 0)
+		      logSequenceNumber = lsn;
+	      contents.setDouble(offset, val);
+	   }
    /**
     * Returns a reference to the disk block
     * that the buffer is pinned to.

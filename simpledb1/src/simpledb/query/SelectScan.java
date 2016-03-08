@@ -100,4 +100,16 @@ public class SelectScan implements UpdateScan {
       UpdateScan us = (UpdateScan) s;
       us.moveToRid(rid);
    }
+
+   //utku
+@Override
+	public double getDouble(String fldname) {
+		return s.getDouble(fldname);
+	}
+
+	@Override
+	public void setDouble(String fldname, double val) {
+		UpdateScan us = (UpdateScan) s;
+		us.setDouble(fldname, val);
+	}
 }

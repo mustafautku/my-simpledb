@@ -95,4 +95,11 @@ public class IndexSelectScan implements Scan {
    public boolean hasField(String fldname) {
       return ts.hasField(fldname);
    }
+
+   //utku
+	@Override
+	public double getDouble(String fldname) {
+
+		return ts.getDouble(fldname);
+	}
 }

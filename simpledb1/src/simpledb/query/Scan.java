@@ -48,6 +48,9 @@ public interface Scan {
     */
    public String   getString(String fldname);
    
+   
+   //utku
+   public double getDouble(String fldname);
    /**
     * Returns true if the scan has the specified field.
     * @param fldname the name of the field

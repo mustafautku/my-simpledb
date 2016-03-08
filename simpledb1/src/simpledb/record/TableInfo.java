@@ -1,6 +1,6 @@
 package simpledb.record;
 
-import static java.sql.Types.INTEGER;
+import static java.sql.Types.*;
 import static simpledb.file.Page.*;
 import java.util.*;
 
@@ -90,6 +90,8 @@ public class TableInfo {
       int fldtype = schema.type(fldname);
       if (fldtype == INTEGER)
          return INT_SIZE;
+      else if (fldtype == DOUBLE)
+          return DOUBLE_SIZE;
       else
          return STR_SIZE(schema.length(fldname));
    }

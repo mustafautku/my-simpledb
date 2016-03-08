@@ -118,5 +118,10 @@ public class MultiBufferProductScan implements Scan {
       nextblknum = end + 1;
       return true;
    }
+
+@Override
+public double getDouble(String fldname) {
+	return prodscan.getDouble(fldname);
+}
 }
 

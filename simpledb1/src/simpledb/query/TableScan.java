@@ -1,6 +1,6 @@
 package simpledb.query;
 
-import static java.sql.Types.INTEGER;
+import static java.sql.Types.*;
 import simpledb.tx.Transaction;
 import simpledb.record.*;
 
@@ -51,6 +51,8 @@ public class TableScan implements UpdateScan {
    public Constant getVal(String fldname) {
       if (sch.type(fldname) == INTEGER)
          return new IntConstant(rf.getInt(fldname));
+      else if (sch.type(fldname) == DOUBLE)
+          return new DoubleConstant(rf.getDouble(fldname));  //utku
       else
          return new StringConstant(rf.getString(fldname));
    }
@@ -79,6 +81,8 @@ public class TableScan implements UpdateScan {
    public void setVal(String fldname, Constant val) {
       if (sch.type(fldname) == INTEGER)
          rf.setInt(fldname, (Integer)val.asJavaVal());
+      else if (sch.type(fldname) == DOUBLE)    // utku
+          rf.setDouble(fldname, (Double)val.asJavaVal());
       else
          rf.setString(fldname, (String)val.asJavaVal());
    }
@@ -106,4 +110,14 @@ public class TableScan implements UpdateScan {
    public void moveToRid(RID rid) {
       rf.moveToRid(rid);
    }
+   
+   //utku
+@Override
+	public double getDouble(String fldname) {
+		return rf.getDouble(fldname);
+	}
+	@Override
+	public void setDouble(String fldname, double val) {
+		rf.setDouble(fldname, val);
+	}
 }

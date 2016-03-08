@@ -50,6 +50,7 @@ public class Page {
     * a good idea to encode this value as a constant. 
     */
    public static final int INT_SIZE = Integer.SIZE / Byte.SIZE;
+   public static final int DOUBLE_SIZE = Double.SIZE / Byte.SIZE;
    
    /**
     * The maximum size, in bytes, of a string of length n.
@@ -119,17 +120,6 @@ public class Page {
       contents.position(offset);
       return contents.getInt();
    }
-   
-   /**
-    * Writes an integer to the specified offset on the page.
-    * @param offset the byte offset within the page
-    * @param val the integer to be written to the page
-    */
-   public synchronized void setInt(int offset, int val) {
-      contents.position(offset);
-      contents.putInt(val);
-   }
-   
    /**
     * Returns the string value at the specified offset of the page.
     * If a string was not stored at that location,
@@ -144,7 +134,21 @@ public class Page {
       contents.get(byteval);
       return new String(byteval);
    }
+   //utku:
+   public synchronized double getDouble(int offset) {
+	      contents.position(offset);
+	      return contents.getDouble();
+	   }
    
+   /**
+    * Writes an integer to the specified offset on the page.
+    * @param offset the byte offset within the page
+    * @param val the integer to be written to the page
+    */
+   public synchronized void setInt(int offset, int val) {
+      contents.position(offset);
+      contents.putInt(val);
+   }
    /**
     * Writes a string to the specified offset on the page.
     * @param offset the byte offset within the page
@@ -156,4 +160,10 @@ public class Page {
       contents.putInt(byteval.length);
       contents.put(byteval);
    }
+     
+   //utku
+   public synchronized void setDouble(int offset, double val) {
+	      contents.position(offset);
+	      contents.putDouble(val);
+	   }
 }

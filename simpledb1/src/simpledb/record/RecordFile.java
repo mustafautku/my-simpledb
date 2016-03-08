@@ -81,6 +81,11 @@ public class RecordFile {
       return rp.getString(fldname);
    }
    
+   //utku
+   public double getDouble(String fldname) {
+	      return rp.getDouble(fldname);
+	   }
+   
    /**
     * Sets the value of the specified field 
     * in the current record.
@@ -101,6 +106,10 @@ public class RecordFile {
       rp.setString(fldname, val);
    }
    
+   //utku
+   public void setDouble(String fldname, double val) {
+	      rp.setDouble(fldname, val);
+	   }
    /**
     * Deletes the current record.
     * The client must call next() to move to

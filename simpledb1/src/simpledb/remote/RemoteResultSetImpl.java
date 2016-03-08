@@ -75,6 +75,17 @@ class RemoteResultSetImpl extends UnicastRemoteObject implements RemoteResultSet
       }
    }
 
+   //utku
+   public double getDouble(String fldname) throws RemoteException {
+		try {
+	      fldname = fldname.toLowerCase(); // to ensure case-insensitivity
+	      return s.getDouble(fldname);
+     }
+     catch(RuntimeException e) {
+        rconn.rollback();
+        throw e;
+     }
+  }
    /**
     * Returns the result set's metadata,
     * by passing its schema into the RemoteMetaData constructor.

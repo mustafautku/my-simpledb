@@ -105,4 +105,13 @@ public class ProductScan implements Scan {
    public boolean hasField(String fldname) {
       return s1.hasField(fldname) || s2.hasField(fldname);
    }
+
+   //utku
+@Override
+	public double getDouble(String fldname) {
+	if (s1.hasField(fldname))
+        return s1.getDouble(fldname);
+     else
+        return s2.getDouble(fldname);
+	}
 }

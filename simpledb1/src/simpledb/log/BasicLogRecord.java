@@ -51,4 +51,11 @@ public class BasicLogRecord {
       pos += STR_SIZE(result.length());
       return result;
    }
+   
+   //utku
+   public double nextDouble() {
+	      double result = pg.getDouble(pos);
+	      pos += DOUBLE_SIZE;
+	      return result;
+	   }
 }

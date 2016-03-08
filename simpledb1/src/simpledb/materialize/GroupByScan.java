@@ -128,5 +128,11 @@ public class GroupByScan implements Scan {
          return true;
       return false;
    }
+
+   //utku
+	@Override
+	public double getDouble(String fldname) {
+		return (Double) getVal(fldname).asJavaVal();
+	}
 }
 

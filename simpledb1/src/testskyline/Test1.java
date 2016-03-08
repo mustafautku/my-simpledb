@@ -30,7 +30,7 @@ public class Test1 {
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 
-		InitOneTable.initData("skyline"); // skyline isimli ornek bir VT.
+		InitIntData.initData("skyline"); // skyline isimli ornek bir VT.
 											// Icerisinde INPUT(A int, B int)
 											// tablosu var. Tabloda 999 tane
 											// kayýt var.
@@ -128,6 +128,16 @@ public class Test1 {
 		}
 		System.out.println("Window'da geride kalanlar: " + counterInWindow); // Bu ornek icin <165 tane olmalý. 
 		
+		System.out.println("Temp'da olanlar: ");
+		counterInTemp=0;
+		output.beforeFirst();
+		while(output.next()){
+			int oA=output.getInt("A");
+			int oB=output.getInt("B");
+			System.out.println(oA + ", " + oB);
+			counterInTemp++;
+		}
+		System.out.println("Toplam: " + (counterInWindow + counterInTemp));
 		input.close();
 		window.close();
 		output.close();

@@ -119,4 +119,13 @@ public class IndexJoinScan implements Scan {
       Constant searchkey = s.getVal(joinfield);
       idx.beforeFirst(searchkey);
    }
+
+   //utku
+	@Override
+	public double getDouble(String fldname) {
+		if (ts.hasField(fldname))
+			return ts.getDouble(fldname);
+		else
+			return s.getDouble(fldname);
+	}
 }

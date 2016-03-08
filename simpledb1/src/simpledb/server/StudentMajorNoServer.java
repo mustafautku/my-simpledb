@@ -16,26 +16,41 @@ public class StudentMajorNoServer {
 	public static void main(String[] args) {
 		try {
 			// analogous to the driver
-			SimpleDB.init("studentdb1");
+			SimpleDB.init("skylineDouble");
 			
 			// analogous to the connection
 			Transaction tx = new Transaction();
 			
 			// analogous to the statement
-			String qry = "select SName, DName "
-		        + "from DEPT, STUDENT "
-		        + "where MajorId = DId";	
+			String qry = "select a,b "
+		        + "from input where a=0,0581380409841231";
+//		        + "where MajorId = DId";	
 			Plan p = SimpleDB.planner().createQueryPlan(qry, tx);
 			
 			// analogous to the result set
 			Scan s = p.open();
 			
-			System.out.println("Name\tMajor");
+//			System.out.println("Name\tMajor");
+//			while (s.next()) {
+//				String sname = s.getString("sname"); //SimpleDB stores field names
+//				String dname = s.getString("dname"); //in lower case
+//				System.out.println(sname + "\t" + dname);
+//			}
+			
+			System.out.println("A\tB");
 			while (s.next()) {
-				String sname = s.getString("sname"); //SimpleDB stores field names
-				String dname = s.getString("dname"); //in lower case
-				System.out.println(sname + "\t" + dname);
+				double A = s.getDouble("a"); 
+				double B = s.getDouble("b"); 
+				System.out.println(A + "\t" + B);
 			}
+			
+//			System.out.println("A\tB");
+//			while (s.next()) {
+//				int A = s.getInt("a"); 
+//				int B = s.getInt("b"); 
+//				System.out.println(A + "\t" + B);
+//			}
+			
 			s.close();
 			tx.commit();
 		}

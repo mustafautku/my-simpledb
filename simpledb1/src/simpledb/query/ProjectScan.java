@@ -65,4 +65,13 @@ public class ProjectScan implements Scan {
    public boolean hasField(String fldname) {
       return fieldlist.contains(fldname);
    }
+
+   //utku
+@Override
+	public double getDouble(String fldname) {
+		if (hasField(fldname))
+			return s.getDouble(fldname);
+		else
+			throw new RuntimeException("field " + fldname + " not found.");
+	}
 }

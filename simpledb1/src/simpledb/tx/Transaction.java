@@ -127,6 +127,13 @@ public class Transaction {
       return buff.getString(offset);
    }
    
+   //utku:
+   public double getDouble(Block blk, int offset) {
+	      concurMgr.sLock(blk);
+	      Buffer buff = myBuffers.getBuffer(blk);
+	      return buff.getDouble(offset);
+	   }
+   
    /**
     * Stores an integer at the specified offset 
     * of the specified block.
@@ -166,6 +173,14 @@ public class Transaction {
       int lsn = recoveryMgr.setString(buff, offset, val);
       buff.setString(offset, val, txnum, lsn);
    }
+   
+   //utku:
+   public void setDouble(Block blk, int offset, double val) {
+	      concurMgr.xLock(blk);
+	      Buffer buff = myBuffers.getBuffer(blk);
+	      int lsn = recoveryMgr.setDouble(buff, offset, val);
+	      buff.setDouble(offset, val, txnum, lsn);
+	   }
    
    /**
     * Returns the number of blocks in the specified file.

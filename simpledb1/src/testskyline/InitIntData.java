@@ -7,8 +7,8 @@ import simpledb.tx.Transaction;
 import simpledb.record.*;
 import simpledb.server.SimpleDB;
 
-public class InitOneTable {
-   public static int  numberOfTuples=999; 
+public class InitIntData {
+   public static int  numberOfTuples=100; 
    
    public static void initData(String dbdir) {
       System.out.println("BEGIN INITIALIZATION");
@@ -20,11 +20,13 @@ public class InitOneTable {
 
          // create and populate the student table
          Schema sch = new Schema();
-         sch.addIntField("A");
-         sch.addIntField("B");
+         sch.addIntField("a");
+         sch.addIntField("b");
+         sch.addStringField("c", 30);
          md.createTable("input", sch, tx);
          TableInfo ti = md.getTableInfo("input", tx);
-
+         
+         
          RecordFile rf = new RecordFile(ti, tx);
          while (rf.next())
             rf.delete();
@@ -33,10 +35,12 @@ public class InitOneTable {
             rf.insert();
             Random _rgen= new Random();
             int _A=_rgen.nextInt(numberOfTuples);
-            rf.setInt("A", _A);
+            rf.setInt("a", _A);
             
             int _B=_rgen.nextInt(numberOfTuples);
-            rf.setInt("B", _B);
+            rf.setInt("b", _B);
+            
+            rf.setString("c", "dummy");
          }
          rf.close();
 

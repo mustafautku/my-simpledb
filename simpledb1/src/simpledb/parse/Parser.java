@@ -24,6 +24,8 @@ public class Parser {
    public Constant constant() {
       if (lex.matchStringConstant())
          return new StringConstant(lex.eatStringConstant());
+      else if(lex.matchDoubleConstant())  // utku
+    	  return new DoubleConstant(lex.eatDoubleConstant());
       else
          return new IntConstant(lex.eatIntConstant());
    }
@@ -208,6 +210,10 @@ public class Parser {
          lex.eatKeyword("int");
          schema.addIntField(fldname);
       }
+      else if (lex.matchKeyword("double")) { //utku
+          lex.eatKeyword("double");
+          schema.addDoubleField(fldname);
+       }
       else {
          lex.eatKeyword("varchar");
          lex.eatDelim('(');

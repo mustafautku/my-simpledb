@@ -147,4 +147,10 @@ public class SortScan implements Scan {
       if (rid2 != null)
          s2.moveToRid(rid2);
    }
+
+   //utku
+	@Override
+	public double getDouble(String fldname) {
+		return currentscan.getDouble(fldname);
+	}
 }

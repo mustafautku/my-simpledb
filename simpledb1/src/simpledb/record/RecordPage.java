@@ -71,6 +71,12 @@ public class RecordPage {
       return tx.getString(blk, position);
    }
    
+   //utku
+   public double getDouble(String fldname) {
+	      int position = fieldpos(fldname);
+	      return tx.getDouble(blk, position);
+	   }
+   
    /**
     * Stores an integer at the specified field
     * of the current record.
@@ -93,6 +99,11 @@ public class RecordPage {
       tx.setString(blk, position, val);
    }
    
+   //utku:
+   public void setDouble(String fldname, double val) {
+	      int position = fieldpos(fldname);
+	      tx.setDouble(blk, position, val);
+	   }
    /**
     * Deletes the current record.
     * Deletion is performed by just marking the record
