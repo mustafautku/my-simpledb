@@ -10,6 +10,7 @@ import simpledb.query.Plan;
 import simpledb.query.Scan;
 import simpledb.query.TablePlan;
 import simpledb.query.TableScan;
+import simpledb.query.UpdateScan;
 import simpledb.record.RID;
 import simpledb.record.Schema;
 import simpledb.record.TableInfo;
@@ -17,30 +18,28 @@ import simpledb.server.SimpleDB;
 import simpledb.tx.Transaction;
 
 /*
- *SKYLINE " 1 ITERATION " 
+ *  SKYLINE on (aind DOUBLE ,bind DOUBLE) ONLY 1 ITERATION. 
+ *  Window dolup, TempFile (output) olusmaya baþlýyor. 
  * 
  * 
  * */
 
-public class Test2 {
+public class Test2b {
 
 	/**
 	 * @param args
 	 */
+	static Schema sch;
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 
-		InitIntData.initData("skyline"); // skyline isimli ornek bir VT.
-											// Icerisinde INPUT(A int, B int, C varchar(30))
-											// tablosu var. Tabloda 999 tane
-											// kayýt var.
+		InitData.initData("skyline100"); 
+		
 		Transaction tx = new Transaction();
 		MetadataMgr md = SimpleDB.mdMgr();
 		TableInfo ti = md.getTableInfo("input", tx);
-		Schema sch = ti.schema();
+		sch = ti.schema();
 
-		int counterInWindow = 0;
-		int counterInTemp = 0;
 		/*
 		 * input tablosunundaki kayýtlarý sýrayla okuyoruz. Burda 1 tampon(page)
 		 * kullanýyor.
@@ -48,9 +47,10 @@ public class Test2 {
 
 		Plan p = new TablePlan("input", tx);
 		Scan input = p.open();
+		input.beforeFirst();
 //		input.next();
 		/*
-		 * Ana hafizadaki WINDOW bölgesinin set edilmesi: 5 tampon yer kapliyor.
+		 * Ana hafizadaki WINDOW bölgesinin set edilmesi: k=1,2,3... tampon yer kapliyor.
 		 * Icerisinde formatlanmýþ boþ slotlar var. Artik bu bolgeyi
 		 * kullanabiliriz.
 		 */
@@ -65,25 +65,6 @@ public class Test2 {
 		// BufferMgr bm=SimpleDB.bufferMgr(); // debug amacli isterseniz tampon
 		// havuzuna bakin doðru taksimat olmus mu?
 
-		/*
-		 * Bu ornekte input dosyasýndan WINDOW sýðacak kadar kayýt okuyoruz.
-		 * Sonra Window dolduktan sonra diðer kayýtlarý tempfile'a yazacagiz.
-		 */
-
-//		while (window.insertFromScan(input)) { // copy data from input to chunk
-//												// area
-//			counterInWindow++;
-//			if (!input.next()) {
-//				break;
-//			}
-//		}
-//		
-//		System.out.println("Window'da olanlar: " + counterInWindow); // TOPLAM
-																		// 33* 5
-																		// = 165
-																		// tane
-																		// olmalý.
-
 		doAnIteration(input, window,output);
 		
 		System.out.println(" (AFTER 1 ITERATION) WINDOW AREA: ");
@@ -91,11 +72,10 @@ public class Test2 {
 		System.out.println("  (AFTER 1 ITERATION) TEMP AREA: ");
 		output.beforeFirst();
 		while(output.next()){
-			int oA=output.getInt("A");
-			int oB=output.getInt("B");
+			double oA=output.getDouble("aind");
+			double oB=output.getDouble("bind");
 			System.out.println(oA + ", " + oB);
 		}
-		
 		input.close();
 		window.close();
 		output.close();
@@ -105,13 +85,13 @@ public class Test2 {
 	static void doAnIteration(Scan input,ChunkScan window, TableScan output){
 		
 		while (input.next()) {
-			int A = input.getInt("A");
-			int B = input.getInt("B");
+			double A = input.getDouble("aind");
+			double B = input.getDouble("bind");
 			window.beforeFirst();
 			boolean willBeInwindow = true;
 			while (window.next()) {
-				int wA = window.getInt("A");
-				int wB = window.getInt("B");
+				double wA = window.getDouble("aind");
+				double wB = window.getDouble("bind");
 				if ((A <= wA && B < wB) || (A < wA && B <= wB)) { // better at
 																	// least one
 																	// dim. ==>
@@ -135,19 +115,26 @@ public class Test2 {
 				}
 			}
 			if (willBeInwindow) {
-				window.beforeFirst();
-				boolean windowEnough = window.insert();
-				if (windowEnough) {
-					window.setVal("A", new IntConstant(A));
-					window.setVal("B", new IntConstant(B));
-				} else {  // window is full. Should write to output file(temp)
-					output.insert();
-					output.setInt("A", input.getInt("A"));
-					output.setInt("B", input.getInt("B"));
+//				window.beforeFirst();
+//				boolean windowEnough = window.insertAvailable() ; burda insert yapýp veri yazmazsa o slot dolu hale geliyor, manasiz bilgi ile harcamiþ olyoruz.  O yuzden çýkardým.
+				if (!window.insertFromScan(input)) {
+					// window is full. Should write to output file(temp)
+//					output.insert();
+//					output.setInt("aint", input.getInt("aint"));
+//					output.setInt("bint", input.getInt("bint"));
+//					window.copyToScan(output);
+					transferBwScans(input,output);
 				}
 			}
 
 		}
 
+	}
+	
+	static boolean transferBwScans(Scan s1, UpdateScan s2) {
+		s2.insert();
+		for (String fldname : sch.fields())
+			s2.setVal(fldname, s1.getVal(fldname));
+		return true;
 	}
 }

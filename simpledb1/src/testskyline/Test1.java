@@ -30,10 +30,8 @@ public class Test1 {
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 
-		InitIntData.initData("skyline"); // skyline isimli ornek bir VT.
-											// Icerisinde INPUT(A int, B int)
-											// tablosu var. Tabloda 999 tane
-											// kayýt var.
+		InitData.initData("skyline100"); // record size=96,  slot size=100,  Block SIZE=400, RPB=4,
+		
 		Transaction tx = new Transaction();
 		MetadataMgr md = SimpleDB.mdMgr();
 		TableInfo ti = md.getTableInfo("input", tx);
@@ -76,13 +74,13 @@ public class Test1 {
 				break;
 			}
 		}
-		System.out.println("Window'da olanlar: " + counterInWindow); // TOPLAM 33* 5 = 165 tane olmalý.
+		System.out.println("Window'da olanlar: " + counterInWindow); // TOPLAM: RPB(=4)* 5 = 20 tane olmalý.
 
 		
 		output.insert(); // en son okuduðumuzu yazamamistik. Once onu
 							// yazýyoruz..
-		output.setInt("A", input.getInt("A"));
-		output.setInt("B", input.getInt("B"));
+		output.setInt("aint", input.getInt("aint"));
+		output.setInt("bint", input.getInt("bint"));
 		counterInTemp++;
 		
 		while (input.next()) { // output icin bir sýnýr yok. istediði kadar
@@ -90,30 +88,31 @@ public class Test1 {
 			output.insert(); // tempfile genislerken 2 tane tampon tutuyor. O
 								// yuzden Windoe size'i 5 yapmak zorunda
 								// kaldik..			
-			output.setInt("A", input.getInt("A"));
-			output.setInt("B", input.getInt("B"));
+			output.setInt("aint", input.getInt("aint"));
+			output.setInt("bint", input.getInt("bint"));
 			counterInTemp++;
 		}
 		
 		System.out.println("Toplam: " + (counterInWindow + counterInTemp));
 		/*
 		 * Bu kýsýmda window bölesindeki bazý kayýtlarý iþaretleme ile ilgili bir ornek. Ýþaretleme yerine bazý kayýtlarýn
-		 * (bu ornekte A deðeri <100 olanlarý) RID deðerlerini saklayalim. Sonra buralara tekrar gidip bu kayýtlrý temp file'a 
+		 * (bu ornekte A deðeri <10 olanlarý) RID deðerlerini saklayalim. Sonra buralara tekrar gidip bu kayýtlrý temp file'a 
 		 * kopyalayalým, bu arada window'dan da silelim..
 		 */
+		int threshold=10;
 		window.beforeFirst();
 		ArrayList<RID> list=new ArrayList<RID>();
 		while(window.next()){
-			if(window.getInt("A")<100)
+			if(window.getInt("aint")<threshold)
 				list.add(window.getRid());			
 		}
-		System.out.println("Window'daki <100 olan elemanlar: toplam "+ list.size() + " eleman tempfile'a aktarýlýyor.");
+		System.out.println("Window'daki <"+threshold+ " olan elemanlar: toplam "+ list.size() + " eleman tempfile'a aktarýlýyor.");
 		Iterator<RID> iter=list.iterator();
 		while(iter.hasNext()){
 			window.moveToRid(iter.next());
 			output.insert();  //tempfile'da yer bul
-			output.setInt("A", window.getInt("A"));
-			output.setInt("B", window.getInt("B"));
+			output.setInt("aint", window.getInt("aint"));
+			output.setInt("bint", window.getInt("bint"));
 			window.delete();		// baska bir slota gecmedik. Bulundugumuz slotu empty yapacak.	
 		}
 		
@@ -122,19 +121,19 @@ public class Test1 {
 		counterInWindow=0;
 		window.beforeFirst();
 		while(window.next()){
-			if(window.getInt("A")<100)
+			if(window.getInt("aint")<threshold)
 				System.err.print("silememisiz maalesef.");
 			counterInWindow++;		
 		}
-		System.out.println("Window'da geride kalanlar: " + counterInWindow); // Bu ornek icin <165 tane olmalý. 
+		System.out.println("Window'da geride kalanlar: " + counterInWindow); 
 		
 		System.out.println("Temp'da olanlar: ");
 		counterInTemp=0;
 		output.beforeFirst();
 		while(output.next()){
-			int oA=output.getInt("A");
-			int oB=output.getInt("B");
-			System.out.println(oA + ", " + oB);
+			int oA=output.getInt("aint");
+			int oB=output.getInt("bint");
+//			System.out.println(oA + ", " + oB);
 			counterInTemp++;
 		}
 		System.out.println("Toplam: " + (counterInWindow + counterInTemp));

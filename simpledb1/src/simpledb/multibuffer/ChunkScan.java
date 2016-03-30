@@ -1,6 +1,6 @@
 package simpledb.multibuffer;
 
-import static java.sql.Types.INTEGER;
+import static java.sql.Types.*;
 import simpledb.tx.Transaction;
 import simpledb.record.*;
 import simpledb.file.Block;
@@ -16,7 +16,7 @@ import java.util.List;
  * 
  * @author Edward Sciore
  */
-public class ChunkScan implements Scan {
+public class ChunkScan implements UpdateScan {
 	private List<RecordPage> pages;
 	private int startbnum, endbnum, current;
 	private Schema sch;
@@ -122,6 +122,8 @@ public class ChunkScan implements Scan {
 	public Constant getVal(String fldname) {
 		if (sch.type(fldname) == INTEGER)
 			return new IntConstant(rp.getInt(fldname));
+		else if (sch.type(fldname) == DOUBLE)
+			return new DoubleConstant(rp.getDouble(fldname));
 		else
 			return new StringConstant(rp.getString(fldname));
 	}
@@ -157,7 +159,7 @@ public class ChunkScan implements Scan {
 	// bundan sonrakiler benim yazdýklarým
 	// Load chunk from source file.
 	public boolean insertFromScan(Scan s) {
-		if (!insert())
+		if (!insertAvailable())
 			return false;
 		for (String fldname : sch.fields())
 			setVal(fldname, s.getVal(fldname));
@@ -165,10 +167,10 @@ public class ChunkScan implements Scan {
 	}
 	
 	// The chunk area is in fact a temptable. This function return the temp file. Used in split stage of sorting.
-	public TempTable getAsTempTable(){
-		close();
-		return temp;
-	}
+//	public TempTable getAsTempTable(){
+//		close();
+//		return temp;
+//	}
 //	public void copyToScan(UpdateScan s) {
 //		s.insert();
 //		for (String fldname : sch.fields())
@@ -176,7 +178,7 @@ public class ChunkScan implements Scan {
 //	}
 	
 	// find an empty slot in the chunk. Always start searching from beginning. May be enhanced for big chunk area with additional search structures.
-	public boolean insert(){
+	public boolean insertAvailable(){
 		beforeFirst();
 		int curr=startbnum;
 		while(!rp.insert()){
@@ -286,7 +288,7 @@ public class ChunkScan implements Scan {
 				System.out.println("--------------");
 			curpage = current;
 			for (String fldname : sch.fields()) {
-				System.out.print(getVal(fldname) + " ");
+				System.out.print(fldname+":"+ getVal(fldname) + "  |");
 			}
 			System.out.println();
 		}
@@ -309,4 +311,44 @@ public class ChunkScan implements Scan {
 	public double getDouble(String fldname) {
 		return rp.getDouble(fldname);
 	}
+	
+	// for debug purpose
+	public int numberOfRecords(){
+		beforeFirst();
+		int counter=0;
+		while (true) {
+			if (rp.next())
+				counter++;
+			else{
+				if (current == endbnum)
+					return counter;
+				current++;
+				moveToBlock(current);				
+			}		
+		}
+
+	}
+
+	@Override
+	public void setInt(String fldname, int val) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void setString(String fldname, String val) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void setDouble(String fldname, double val) {
+		// TODO Auto-generated method stub
+		
+	}
+	public void insert(){
+		
+	}
+	 
+	  
 }

@@ -1,67 +1,41 @@
 package testskyline;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Iterator;
-import simpledb.materialize.TempTable;
-import simpledb.metadata.MetadataMgr;
-import simpledb.multibuffer.ChunkScan;
-import simpledb.query.IntConstant;
-import simpledb.query.Plan;
-import simpledb.query.Scan;
-import simpledb.query.TablePlan;
-import simpledb.query.TableScan;
-import simpledb.query.UpdateScan;
-import simpledb.record.RID;
-import simpledb.record.Schema;
-import simpledb.record.TableInfo;
-import simpledb.server.SimpleDB;
-import simpledb.tx.Transaction;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.Shape;
+import java.awt.geom.Line2D;
+
+import javax.swing.*;
+
 
 /*
- * Generate double data.
- * 
- * 
- * */
+ * a simple Graphic sample
+ */
+public class Test4 extends JFrame {
 
-public class Test4 {
-	
-	
-	/**
-	 * @param args
-	 */
-	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-		SimpleDB.BUFFER_SIZE=500;
-	
-//		InitIntData.initData("skyline");
-		
-		InitDoubleData.initData("skylineDouble"); // skyline isimli ornek bir VT.
-											// Icerisinde INPUT(A double, B double, C varchar(30))tablosu var. 
-		Transaction tx = new Transaction();
-		MetadataMgr md = SimpleDB.mdMgr();
-//		TableInfo ti = md.getTableInfo("input", tx);
-		
-		Plan p = new TablePlan("input", tx);
-		
-		// Test 1: List all data:
-//		Scan input = p.open();
-//		while(input.next()){
-//			double A=input.getDouble("A");
-//			double B=input.getDouble("B");
-//			System.out.println(A + ",  " + B);
-//		}
-//		input.close();
-		
-		// Test 2: List data with A and B out of area [-2,+2]
-//		UpdateScan updateinput=(UpdateScan)p.open();
-//		while(updateinput.next()){
-//			double A=updateinput.getDouble("a");
-//			double B=updateinput.getDouble("b");
-//			if((A<-2 || A>2))// && (B<-2 || B>2) ) 
-//				System.out.println(A + ",  " + B);
-//		}
-		
-	
-	}
+    public static void main(String args[]) {
+    	Test4 t = new Test4();
+        t.add(new JComponent() {
+            public void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                                    RenderingHints.VALUE_ANTIALIAS_ON);
+                Shape l = new Line2D.Double(200,(400-200),300, (400- 300));
+                g2.draw(l);
+                
+                // several lines.
+//                for (int i = 0; i < 50; i++) {
+//                    double delta = i / 10.0;
+//                    double y = 5 + 5*i;
+//                    Shape l = new Line2D.Double(250, y, 300, y + delta);
+//                    g2.draw(l);
+//                }
+            }
+        });
+
+        t.setDefaultCloseOperation(EXIT_ON_CLOSE);
+        t.setSize(400, 400);
+        t.setVisible(true);
+    }
 }
