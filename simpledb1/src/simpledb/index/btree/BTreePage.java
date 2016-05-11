@@ -26,7 +26,7 @@ public class BTreePage {
     * @param ti the metadata for the particular B-tree file
     * @param tx the calling transaction
     */
-   public BTreePage(Block currentblk, TableInfo ti, Transaction tx) {
+   public BTreePage(Block currentblk, TableInfo ti,Transaction tx) {
       this.currentblk = currentblk;
       this.ti = ti;
       this.tx = tx;
@@ -75,7 +75,7 @@ public class BTreePage {
     */
    public Block split(int splitpos, int flag) {
       Block newblk = appendNew(flag);
-      BTreePage newpage = new BTreePage(newblk, ti, tx);
+      BTreePage newpage = new BTreePage(newblk, ti,tx);
       transferRecs(splitpos, newpage);
       newpage.setFlag(flag);
       newpage.close();
@@ -182,6 +182,11 @@ public class BTreePage {
     */
    public int getNumRecs() {
       return tx.getInt(currentblk, INT_SIZE);
+   }
+   
+   //utku:
+   public int getBlkId(){
+	   return currentblk.number();
    }
    
    // Private methods

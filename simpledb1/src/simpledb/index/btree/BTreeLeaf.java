@@ -46,14 +46,34 @@ public class BTreeLeaf {
     * Returns false if there is no more such records.
     * @return false if there are no more leaf records for the search key
     */
-   public boolean next() {
+//   public boolean next() {
+   public boolean next(Statistics m_stats) {
       currentslot++;
       if (currentslot >= contents.getNumRecs()) 
-         return tryOverflow();
+         return tryOverflow(m_stats);
       else if (contents.getDataVal(currentslot).equals(searchkey))
          return true;
       else 
-         return tryOverflow();
+         return tryOverflow(m_stats);
+   }
+   
+   // utku: Another "special" next func. for range query exec. 
+   /*
+    * It is difficult to return back to main leaf node after processing the OFs. 
+    * Thus, first we first process all values in the leaf, then OFs are executed. This naturally changes the order.
+    */
+   public boolean nextLessThan(Constant rangeEnd,Statistics m_stats){
+	   currentslot++;
+	   if (currentslot >= contents.getNumRecs()) 
+		   return tryOverflow(m_stats);//return false; 
+	   
+	   Constant c=contents.getDataVal(currentslot);
+	   if(currentslot==0) searchkey=c;
+	   if (c.compareTo(rangeEnd)<=0)
+	         return true;
+	   else 
+	         return tryOverflow(m_stats);
+
    }
    
    /**
@@ -68,8 +88,8 @@ public class BTreeLeaf {
     * Deletes the leaf record having the specified dataRID
     * @param datarid the dataRId whose record is to be deleted
     */
-   public void delete(RID datarid) {
-      while(next())
+   public void delete(RID datarid,Statistics m_stats) {
+      while(next(m_stats))
          if(getDataRid().equals(datarid)) {
          contents.delete(currentslot);
          return;
@@ -89,7 +109,7 @@ public class BTreeLeaf {
     * @param datarid the dataRID value of the new record
     * @return the directory entry of the newly-split page, if one exists.
     */
-   public DirEntry insert(RID datarid) {
+   public DirEntry insert(RID datarid,Statistics m_stats) {
    	// bug fix:  If the page has an overflow page 
    	// and the searchkey of the new record would be lowest in its page, 
    	// we need to first move the entire contents of that page to a new block
@@ -100,6 +120,8 @@ public class BTreeLeaf {
    		currentslot = 0;
    		contents.setFlag(-1);
    		contents.insertLeaf(currentslot, searchkey, datarid); 
+   		m_stats.m_leafs++;   	
+   		m_stats.m_splits++;
    		return new DirEntry(firstval, newblk.number());  
    	}
 	  
@@ -114,6 +136,8 @@ public class BTreeLeaf {
          // create an overflow block to hold all but the first record
          Block newblk = contents.split(1, contents.getFlag());
          contents.setFlag(newblk.number());
+         m_stats.m_OFnodes++;
+         m_stats.m_splits++;
          return null;
       }
       else {
@@ -131,11 +155,14 @@ public class BTreeLeaf {
                splitpos--;
          }
          Block newblk = contents.split(splitpos, -1);
+         m_stats.m_leafs++;
+         m_stats.m_splits++;
          return new DirEntry(splitkey, newblk.number());
       }
    }
    
-   private boolean tryOverflow() {
+//   private boolean tryOverflow() {
+   private boolean tryOverflow(Statistics m_stats) {
       Constant firstkey = contents.getDataVal(0);
       int flag = contents.getFlag();
       if (!searchkey.equals(firstkey) || flag < 0)
@@ -143,7 +170,10 @@ public class BTreeLeaf {
       contents.close();
       Block nextblk = new Block(ti.fileName(), flag);
       contents = new BTreePage(nextblk, ti, tx);
+      m_stats.m_reads++;
       currentslot = 0;
       return true;
    }
+   
+   
 }
